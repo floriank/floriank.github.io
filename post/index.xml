@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Posts on Notes of a awful developer</title>
+    <link>https://floriank.github.io/post/</link>
+    <description>Recent content in Posts on Notes of a awful developer</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <copyright>(c) 2016 Florian Kraft</copyright>
+    <lastBuildDate>Tue, 02 Feb 2016 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://floriank.github.io/post/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Introduction: First post</title>
+      <link>https://floriank.github.io/post/intro/</link>
+      <pubDate>Tue, 02 Feb 2016 00:00:00 +0000</pubDate>
+      
+      <guid>https://floriank.github.io/post/intro/</guid>
+      <description>&lt;p&gt;First post hype!&lt;/p&gt;
+
+&lt;p&gt;Erm. Not really. This is a first post to be made, but it contains nothing of interest really.&lt;/p&gt;
+
+&lt;p&gt;I always wanted a blog to share my world view and my opinion with a world that probably could not care less about both of them - considering the sheer mass of blogs and opinions, tweets, facebook pages, likes, upvotes, kitty videos, doge videos and similar currently in existance.&lt;/p&gt;
+
+&lt;p&gt;Nevertheless, I hope you can find something useful to you here in the future.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>
