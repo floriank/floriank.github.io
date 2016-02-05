@@ -1,13 +1,153 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Development on Notes of a awful developer</title>
+    <title>Development on Notes of an awful developer</title>
     <link>https://floriank.github.io/categories/development/</link>
-    <description>Recent content in Development on Notes of a awful developer</description>
+    <description>Recent content in Development on Notes of an awful developer</description>
     <generator>Hugo -- gohugo.io</generator>
     <copyright>(c) 2016 Florian Kraft</copyright>
-    <lastBuildDate>Tue, 02 Feb 2016 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Thu, 04 Feb 2016 10:33:17 +0100</lastBuildDate>
     <atom:link href="https://floriank.github.io/categories/development/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Working around timing issues in docker compose</title>
+      <link>https://floriank.github.io/post/working-around-timing-issues-in-docker-compose/</link>
+      <pubDate>Thu, 04 Feb 2016 10:33:17 +0100</pubDate>
+      
+      <guid>https://floriank.github.io/post/working-around-timing-issues-in-docker-compose/</guid>
+      <description>
+
+&lt;h2 id=&#34;containers:4cef9258b76593241d6dc5f466abd67c&#34;&gt;Containers&lt;/h2&gt;
+
+&lt;p&gt;I really like the concept of containers. Having been a somewhat avid &lt;a href=&#34;https://vagrantup.com&#34;&gt;vagrant&lt;/a&gt; user in the past, the speed gain that containers can provide over a virtual machine is a good sell to me. Also, having a very snapshottable environment I can bring up and down with dependencies packed neatly into containers is a plus. If you are reading this article you probably heard the sermon before.&lt;/p&gt;
+
+&lt;p&gt;If you did not hear the good word yet - read up on it. There are some good arguments for and against containers and the technology behind is quite interesting.&lt;/p&gt;
+
+&lt;p&gt;There are several solutions for containerization out there - most notably &lt;a href=&#34;https://docker.io&#34;&gt;docker&lt;/a&gt; and &lt;a href=&#34;https://coreos.com/rkt/docs/latest/&#34;&gt;rkt&lt;/a&gt;, both of which are written in Go and can manage containers on Linux, effectively wrapping &lt;a href=&#34;https://www.wikiwand.com/en/LXC&#34;&gt;LXC&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;This post will deal with &lt;code&gt;docker&lt;/code&gt; and more specifically, &lt;code&gt;docker compose&lt;/code&gt;.&lt;/p&gt;
+
+&lt;h2 id=&#34;setup:4cef9258b76593241d6dc5f466abd67c&#34;&gt;Setup&lt;/h2&gt;
+
+&lt;p&gt;If you&amp;rsquo;re looking at a bigger project you might need multiple containers to run all the software you need. So, you might end up with a sizable list:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;the main platform, e.g. a Rails/Django/&lt;my favourite framework&gt; application&lt;/li&gt;
+&lt;li&gt;a database server, e.g. PostgreSQL, Mongo, MySQL, etc.&lt;/li&gt;
+&lt;li&gt;some kind of search server, e.g. SOLR, ElasticSearch, ThinkingSphinx&lt;/li&gt;
+&lt;li&gt;maybe one or two custom APIs detached from the main application&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;The situation get&amp;rsquo;s even worse if you decide to go full SOA by having a small fleet of microservices.&lt;/p&gt;
+
+&lt;p&gt;Assuming the former setup, you have 4 to 5 docker images that you&amp;rsquo;re now orchestrating to setup your project. How tedious.&lt;/p&gt;
+
+&lt;p&gt;Enter &lt;a href=&#34;https://docs.docker.com/compose/&#34;&gt;docker compose&lt;/a&gt;. It&amp;rsquo;s a little tool as part of the &lt;code&gt;docker&lt;/code&gt; toolkit that enables you to provide a yaml configuration and then starts up all of the containers required for your project with the configuration provided.&lt;/p&gt;
+
+&lt;p&gt;And that&amp;rsquo;s great - since you now only need the docker compose config in addition to the actual images (which &lt;code&gt;docker&lt;/code&gt; will happily pull for you).&lt;/p&gt;
+
+&lt;p&gt;To give an example:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-yaml&#34;&gt;# the database image
+db:
+  image: &amp;quot;postgres:9.3&amp;quot;
+  ports:
+    - &amp;quot;5432:5432&amp;quot;
+  environment:
+    POSTGRES_USER: florian
+    POSTGRES_PASSWORD: 12345
+  volumes_from:
+    - dbdata
+
+# a second container to be used as a volume for the db
+dbdata:
+  image: &amp;quot;postgres:9.3&amp;quot;
+  volumes:
+    - /var/lib/postgres
+  command: &amp;quot;true&amp;quot;
+
+# elasticsearch
+elasticsearch:
+  image: &amp;quot;elasticsearch:2.2&amp;quot;
+  ports:
+    - &amp;quot;9200&amp;quot;
+  volumes_from:
+    - elasticsearch_index
+
+# the index has to be persisted somewhere
+elasticsearch_index:
+  image: &amp;quot;elasticsearch:2.2&amp;quot;
+  command: &amp;quot;true&amp;quot;
+  volumes:
+    - /usr/share/elasticsearch/data
+
+# the main image, this is the application
+web:
+  image: &amp;quot;company/fancy-rails:2.0&amp;quot;
+  command: &amp;quot;bundle exec rails s&amp;quot;
+  ports:
+    - &amp;quot;3000:3000&amp;quot;
+  links:
+    - &amp;quot;db:db&amp;quot;
+    - &amp;quot;elasticsearch:elasticsearch&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This config should not be usable as I made up all of it and &lt;code&gt;company/fancy-rails:2.0&lt;/code&gt; is not pullable.&lt;/p&gt;
+
+&lt;p&gt;Running &lt;code&gt;docker compose up&lt;/code&gt; should start all of these containers. And if you&amp;rsquo;re lucky, you get a running Rails application with PostgreSQL and ElasticSearch servers at its disposal.&lt;/p&gt;
+
+&lt;h2 id=&#34;timing-problems:4cef9258b76593241d6dc5f466abd67c&#34;&gt;Timing Problems&lt;/h2&gt;
+
+&lt;p&gt;Since we&amp;rsquo;re not living in a perfect world, there might be some problems with this approach, most notably timing.&lt;/p&gt;
+
+&lt;p&gt;&lt;code&gt;docker compose&lt;/code&gt; will resolve your container dependencies for you, but the startup has no mercy for actual dependencies at runtime and will crash if the container you&amp;rsquo;re trying to start crashes itself (to be more precise - if the command you ran crashed).&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s say that our fancy Rails application requires a connection to the ElasticSearch server to start up. You are likely to end up with a crash of the whole application stack becase ElasticSearch takes longer to boot than the Rails application itself. Your stack will be torn down by &lt;code&gt;docker compose&lt;/code&gt; before you know what&amp;rsquo;s going on, just because the main container crashed.&lt;/p&gt;
+
+&lt;p&gt;There is an ongoing discussion about this problem on &lt;a href=&#34;https://github.com/docker/compose/issues/374&#34;&gt;Github&lt;/a&gt;. So far most solutions revolve around having a custom script wait for the required dependencies to start up and be reachable before actually firing the container command.&lt;/p&gt;
+
+&lt;h2 id=&#34;workaround:4cef9258b76593241d6dc5f466abd67c&#34;&gt;Workaround&lt;/h2&gt;
+
+&lt;p&gt;I hesitate to call this a solution, but here is my workaround which I used to tackle this problem:&lt;/p&gt;
+
+&lt;p&gt;Introduce a shellscript &lt;code&gt;start.sh&lt;/code&gt; in your application and put the following in there:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;#!/bin/bash
+while ! nc -z elasticsearch 9200; do sleep 2; done
+bundle exec rails s -b 0.0.0.0
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;You will need to rebuild your image for the file to be part of the container. Also, change the line in the &lt;code&gt;docker-compose.yml&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-yaml&#34;&gt;web:
+  image: &amp;quot;company/fancy-rails:2.0.1&amp;quot;
+  command: &amp;quot;sh start.sh&amp;quot;
+  ports:
+    - &amp;quot;3000:3000&amp;quot;
+  links:
+    - &amp;quot;db:db&amp;quot;
+    - &amp;quot;elasticsearch:elasticsearch&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Eseentially, the script uses &lt;code&gt;netcat&lt;/code&gt; to query the &lt;code&gt;elasticsearch&lt;/code&gt; host on the required port until it&amp;rsquo;s available. Please note that this workaround is prone to errors as the script might query forever in case the &lt;code&gt;elasticsearch&lt;/code&gt; container never properly comes up. Afterwards, it&amp;rsquo;s time to boot up the rails server.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Note&lt;/strong&gt;: &lt;code&gt;docker compose&lt;/code&gt; provides the &lt;code&gt;elasticsearch&lt;/code&gt; host name conveniently via the &lt;code&gt;links&lt;/code&gt; attribute so that you do not have to use overly verbose names taken from the environment anymore. In case you were wondering how the web container knows about the ElasticSearch container.&lt;/p&gt;
+
+&lt;h2 id=&#34;conclusion:4cef9258b76593241d6dc5f466abd67c&#34;&gt;Conclusion&lt;/h2&gt;
+
+&lt;p&gt;This is far from a perfect solution. To start off, a counter could be used to abort once the script queried long enough. It&amp;rsquo;s also dependent on &lt;code&gt;netcat&lt;/code&gt; as part of the container, which might be undesirable if you don&amp;rsquo;t want the extra dependency.&lt;/p&gt;
+
+&lt;p&gt;I hope this will help in the future, tackling these issues got me stuck for a little bit on the learning curve.&lt;/p&gt;
+
+&lt;h2 id=&#34;resources:4cef9258b76593241d6dc5f466abd67c&#34;&gt;Resources&lt;/h2&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;docker compose&lt;/code&gt; &lt;a href=&#34;https://docs.docker.com/compose/&#34;&gt;Documentation&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://github.com/docker/compose/issues/374&#34;&gt;Ongoing discussion on the matter&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;http://www.smallbusinesscomputing.com/biztools/an-introduction-to-linux-containers.html&#34;&gt;A quick introduction to Linux containers&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</description>
+    </item>
     
     <item>
       <title>Introduction: First post</title>

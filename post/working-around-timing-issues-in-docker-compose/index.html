@@ -1,0 +1,295 @@
+<html lang="en">
+<head>
+
+  
+  <meta charset="utf-8">
+  <title>Working around timing issues in docker compose</title>
+  <meta name="description" content="Working around timing issues in docker compose">
+  <meta name="author" content="Florian Kraft">
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="https://floriank.github.io/css/fonts.css">
+  
+  
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
+  
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
+
+  <link rel="stylesheet" href="https://floriank.github.io/css/custom.css">
+
+  
+  
+  <link rel="stylesheet" href="https://floriank.github.io/highlight/styles/default.css">
+  
+  <script src="https://floriank.github.io/highlight/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+</head>
+<body>
+
+
+<div class="header pure-g">
+    <div class="pure-u-1-24 pure-u-md-5-24"></div>
+    <div class="pure-u-11-12 pure-u-md-5-8">
+        <div class="desktop pure-menu pure-menu-horizontal nav-menu">
+            
+            <a href="https://floriank.github.io/" class="site-title pure-menu-heading">Notes of an awful developer</a>
+            <ul class="pure-menu-list">
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/categories/development" class="pure-menu-link">Development</a>
+                </li>
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/about/" class="pure-menu-link">About</a>
+                </li>
+            </ul>
+        </div>
+        <div class="mobile pure-menu nav-menu">
+            <a href="https://floriank.github.io/" class="pure-menu-heading" id="toggle-home">Notes of an awful developer</a>
+            <a href="#" id="toggle-btn">&#9776;</a>
+            <ul class="pure-menu-list" id="toggle-content" style="display:none;">
+                
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/categories/development" class="pure-menu-link">Development</a>
+                </li>
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/about" class="pure-menu-link">About</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="pure-u-1-24 pure-u-md-1-6"></div>
+</div>
+
+
+<div class="pure-g">
+    <div class="pure-u-1-24 pure-u-md-5-24"></div>
+	<div class="pure-u-11-12 pure-u-md-5-8">
+        <div class="post">
+
+            <div class="post-title">
+                <p class="footnote">
+                    <time class="">2016-02-04</time>
+		            
+                    
+                    |
+                    
+                    
+
+                    
+                    categories:<a href="https://floriank.github.io/categories/development">development</a> 
+                    
+
+                    
+                </p>
+                <h1>Working around timing issues in docker compose</h1>
+            </div>
+
+            <div class="post-content">
+                
+
+<h2 id="containers:4cef9258b76593241d6dc5f466abd67c">Containers</h2>
+
+<p>I really like the concept of containers. Having been a somewhat avid <a href="https://vagrantup.com">vagrant</a> user in the past, the speed gain that containers can provide over a virtual machine is a good sell to me. Also, having a very snapshottable environment I can bring up and down with dependencies packed neatly into containers is a plus. If you are reading this article you probably heard the sermon before.</p>
+
+<p>If you did not hear the good word yet - read up on it. There are some good arguments for and against containers and the technology behind is quite interesting.</p>
+
+<p>There are several solutions for containerization out there - most notably <a href="https://docker.io">docker</a> and <a href="https://coreos.com/rkt/docs/latest/">rkt</a>, both of which are written in Go and can manage containers on Linux, effectively wrapping <a href="https://www.wikiwand.com/en/LXC">LXC</a>.</p>
+
+<p>This post will deal with <code>docker</code> and more specifically, <code>docker compose</code>.</p>
+
+<h2 id="setup:4cef9258b76593241d6dc5f466abd67c">Setup</h2>
+
+<p>If you&rsquo;re looking at a bigger project you might need multiple containers to run all the software you need. So, you might end up with a sizable list:</p>
+
+<ul>
+<li>the main platform, e.g. a Rails/Django/<my favourite framework> application</li>
+<li>a database server, e.g. PostgreSQL, Mongo, MySQL, etc.</li>
+<li>some kind of search server, e.g. SOLR, ElasticSearch, ThinkingSphinx</li>
+<li>maybe one or two custom APIs detached from the main application</li>
+</ul>
+
+<p>The situation get&rsquo;s even worse if you decide to go full SOA by having a small fleet of microservices.</p>
+
+<p>Assuming the former setup, you have 4 to 5 docker images that you&rsquo;re now orchestrating to setup your project. How tedious.</p>
+
+<p>Enter <a href="https://docs.docker.com/compose/">docker compose</a>. It&rsquo;s a little tool as part of the <code>docker</code> toolkit that enables you to provide a yaml configuration and then starts up all of the containers required for your project with the configuration provided.</p>
+
+<p>And that&rsquo;s great - since you now only need the docker compose config in addition to the actual images (which <code>docker</code> will happily pull for you).</p>
+
+<p>To give an example:</p>
+
+<pre><code class="language-yaml"># the database image
+db:
+  image: &quot;postgres:9.3&quot;
+  ports:
+    - &quot;5432:5432&quot;
+  environment:
+    POSTGRES_USER: florian
+    POSTGRES_PASSWORD: 12345
+  volumes_from:
+    - dbdata
+
+# a second container to be used as a volume for the db
+dbdata:
+  image: &quot;postgres:9.3&quot;
+  volumes:
+    - /var/lib/postgres
+  command: &quot;true&quot;
+
+# elasticsearch
+elasticsearch:
+  image: &quot;elasticsearch:2.2&quot;
+  ports:
+    - &quot;9200&quot;
+  volumes_from:
+    - elasticsearch_index
+
+# the index has to be persisted somewhere
+elasticsearch_index:
+  image: &quot;elasticsearch:2.2&quot;
+  command: &quot;true&quot;
+  volumes:
+    - /usr/share/elasticsearch/data
+
+# the main image, this is the application
+web:
+  image: &quot;company/fancy-rails:2.0&quot;
+  command: &quot;bundle exec rails s&quot;
+  ports:
+    - &quot;3000:3000&quot;
+  links:
+    - &quot;db:db&quot;
+    - &quot;elasticsearch:elasticsearch&quot;
+</code></pre>
+
+<p>This config should not be usable as I made up all of it and <code>company/fancy-rails:2.0</code> is not pullable.</p>
+
+<p>Running <code>docker compose up</code> should start all of these containers. And if you&rsquo;re lucky, you get a running Rails application with PostgreSQL and ElasticSearch servers at its disposal.</p>
+
+<h2 id="timing-problems:4cef9258b76593241d6dc5f466abd67c">Timing Problems</h2>
+
+<p>Since we&rsquo;re not living in a perfect world, there might be some problems with this approach, most notably timing.</p>
+
+<p><code>docker compose</code> will resolve your container dependencies for you, but the startup has no mercy for actual dependencies at runtime and will crash if the container you&rsquo;re trying to start crashes itself (to be more precise - if the command you ran crashed).</p>
+
+<p>Let&rsquo;s say that our fancy Rails application requires a connection to the ElasticSearch server to start up. You are likely to end up with a crash of the whole application stack becase ElasticSearch takes longer to boot than the Rails application itself. Your stack will be torn down by <code>docker compose</code> before you know what&rsquo;s going on, just because the main container crashed.</p>
+
+<p>There is an ongoing discussion about this problem on <a href="https://github.com/docker/compose/issues/374">Github</a>. So far most solutions revolve around having a custom script wait for the required dependencies to start up and be reachable before actually firing the container command.</p>
+
+<h2 id="workaround:4cef9258b76593241d6dc5f466abd67c">Workaround</h2>
+
+<p>I hesitate to call this a solution, but here is my workaround which I used to tackle this problem:</p>
+
+<p>Introduce a shellscript <code>start.sh</code> in your application and put the following in there:</p>
+
+<pre><code class="language-bash">#!/bin/bash
+while ! nc -z elasticsearch 9200; do sleep 2; done
+bundle exec rails s -b 0.0.0.0
+</code></pre>
+
+<p>You will need to rebuild your image for the file to be part of the container. Also, change the line in the <code>docker-compose.yml</code>:</p>
+
+<pre><code class="language-yaml">web:
+  image: &quot;company/fancy-rails:2.0.1&quot;
+  command: &quot;sh start.sh&quot;
+  ports:
+    - &quot;3000:3000&quot;
+  links:
+    - &quot;db:db&quot;
+    - &quot;elasticsearch:elasticsearch&quot;
+</code></pre>
+
+<p>Eseentially, the script uses <code>netcat</code> to query the <code>elasticsearch</code> host on the required port until it&rsquo;s available. Please note that this workaround is prone to errors as the script might query forever in case the <code>elasticsearch</code> container never properly comes up. Afterwards, it&rsquo;s time to boot up the rails server.</p>
+
+<p><strong>Note</strong>: <code>docker compose</code> provides the <code>elasticsearch</code> host name conveniently via the <code>links</code> attribute so that you do not have to use overly verbose names taken from the environment anymore. In case you were wondering how the web container knows about the ElasticSearch container.</p>
+
+<h2 id="conclusion:4cef9258b76593241d6dc5f466abd67c">Conclusion</h2>
+
+<p>This is far from a perfect solution. To start off, a counter could be used to abort once the script queried long enough. It&rsquo;s also dependent on <code>netcat</code> as part of the container, which might be undesirable if you don&rsquo;t want the extra dependency.</p>
+
+<p>I hope this will help in the future, tackling these issues got me stuck for a little bit on the learning curve.</p>
+
+<h2 id="resources:4cef9258b76593241d6dc5f466abd67c">Resources</h2>
+
+<ul>
+<li><code>docker compose</code> <a href="https://docs.docker.com/compose/">Documentation</a></li>
+<li><a href="https://github.com/docker/compose/issues/374">Ongoing discussion on the matter</a></li>
+<li><a href="http://www.smallbusinesscomputing.com/biztools/an-introduction-to-linux-containers.html">A quick introduction to Linux containers</a></li>
+</ul>
+
+            </div>
+        </div>
+	</div>
+    <div class="pure-u-1-24 pure-u-md-1-6"></div>
+</div>
+
+<div class="footer pure-g">
+    <div class="pure-u-1-24 pure-u-md-5-24"></div>
+    <div class="pure-u-11-12 pure-u-md-5-8">
+        <div class="pure-menu pure-menu-horizontal footer-content">
+            <ul>
+                <li class="pure-menu-heading" id="foot-name">Florian Kraft:</li>
+
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://github.com/floriank" class="pure-menu-link">GitHub</a>
+                </li>
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://www.linkedin.com/in/floriankraft" class="pure-menu-link">LinkedIn</a>
+                </li>
+                
+
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://twitter.com/carhillion" class="pure-menu-link">Twitter</a>
+                </li>
+                
+
+            </ul>
+            <a href="#" class="pure-menu-heading pull-right" id="gototop-btn">↑↑</a>
+        </div>
+	  </div>
+      <div class="pure-u-1-24 pure-u-md-1-6"></div>
+</div>
+
+
+<script src="https://floriank.github.io/js/jquery.min.js" type="text/javascript"></script>
+<script src="https://floriank.github.io/js/jquery.timeago.js" type="text/javascript"></script>
+<script type="text/javascript">
+  $(function(){
+    $("time.timeago").timeago();
+  })
+  $("#toggle-btn").click(function(){
+    $("#toggle-content").toggle();
+    if($(this).html() === "☰") {
+        $(this).html("X")
+    } else {
+        $(this).html("☰")
+    }
+  });
+  $(window).resize(function(){
+    if(window.innerWidth > 768) {
+      $(".desktop").removeAttr("style");
+    }
+  });
+</script>
+
+</body>
+</html>
+
