@@ -1,0 +1,79 @@
+==================================================================
+https://keybase.io/schnuffi
+--------------------------------------------------------------------
+
+I hereby claim:
+
+  * I am an admin of https://floriank.github.io
+  * I am schnuffi (https://keybase.io/schnuffi) on keybase.
+  * I have a public key with fingerprint DBC1 0E2A 78EC B157 4C30  8D78 0D9E F3B7 0594 8500
+
+To do so, I am signing this object:
+
+{
+    "body": {
+        "client": {
+            "name": "keybase.io node.js client",
+            "version": "0.8.25"
+        },
+        "key": {
+            "eldest_kid": "0101bbec3d2e04f4b1fc3952817dbcd99ae0aa3614a3700fcc1ef675601c4534d9d40a",
+            "fingerprint": "dbc10e2a78ecb1574c308d780d9ef3b705948500",
+            "host": "keybase.io",
+            "key_id": "0d9ef3b705948500",
+            "kid": "0101bbec3d2e04f4b1fc3952817dbcd99ae0aa3614a3700fcc1ef675601c4534d9d40a",
+            "uid": "74b5a8202c1baa4df4911649e9139419",
+            "username": "schnuffi"
+        },
+        "service": {
+            "hostname": "floriank.github.io",
+            "protocol": "https:"
+        },
+        "type": "web_service_binding",
+        "version": 1
+    },
+    "ctime": 1454757919,
+    "expire_in": 157680000,
+    "prev": "53495fdee9f95ee10d3287d504194de762c6f26f9fcced3157d3d5a9685acff1",
+    "seqno": 10,
+    "tag": "signature"
+}
+
+which yields the signature:
+
+-----BEGIN PGP MESSAGE-----
+Version: GnuPG v2
+
+owGtUn1QFGUcPvA8D8yJgQIpCGalhgRp93b39vZQYxphDNBQPqLB6dyPd2Hj2j3u
+9g4OQhjjSPkIGIGMBghBUEam8YPUppgRMhI/BjjtQ4SQj4hkdCSkmAZtV2mmpn97
+/3rn/T3P8/s9z/urXrdKpfVY1/Tb2dW1LpXH5Vlaldb9Q0gBRIusEzIWQIyZB4Kk
+3ATqXQAZoWzgpCkbiOLFUEFkQdQ7ttAVTCTkAFYbLwoyCo4yROlwqDBSwStsYGaB
+TTJl86xSRWCEpgGDsjoAYxxGIxyDkrjOgBAszbAkSQGYolA9glEoAcMcwyCA0xO4
+HkYYDEcxlmQxmJIbcryQCawWK6+MCMlcBAY6ijAAhkZwAmNQ2MASBpglAYfSBIyT
+mAGHYZmYJdqkf5mBHk9qejLef/H/89z2x3IERuOUQQfrGISmKIzlMBJB9BgJSAQl
+MYRUgDZgXQnexmQJdo7jlVDlVwfPACVYxckKgjOLVp4SsqMyeSnLTj9xZbGKksiI
+ZrmeJUkWm1HhS06LQsgFtGlFykTzAiun2fzPb0RkKCPxijiC4RiBEyRCRkIgz8Jb
+gYlXEDihN8DyURoBh6wp2yRxjgWA5EgcAARmUZ2BYHFYNoSxgNDrGD2n03OknA5g
+UVmARVmcIvUGnGI4DoEUdzmCKGvLohKVqVjnMwVKslsBVHjQM0it8tCqNKs9lUVV
+eXv5/L29La8//Uh45Ut4/XTjsT+vf+Q+pQ3YlLxbKOu5Vdk+XVnc21eYFWf3vR82
+MHan/agppWPcge55b7z9mStbW5O/EKYSV/Fx9hO3vRf2dz+75DbfG6le7MobjQgo
+GS73jinzv5CQFqq5ex4qecFj0mssRlURppn8OWh/vNeGq8Zgzz3VfwwlpcLju8nh
+Yf++wcr5enFXDGOpuXbw+vEu9bn0iKC9nwzG2xd+n72R7RgtCtXmjHQs/7Tx0JCf
+MbyqvaEI27am9i3T5OV619qBnth96tbY9H2bByIKxoZKE24Gl7z/wMO3s+dUxWfr
+Q1AkaaL3xblPv4pt2tH/ctnN6WSvpsEtd6ZnnoosdtS31LsWvs84XjbmfnDIOWc6
+N/+tb1tiAnV/i33mYfJFve7WCWbkDc+31R3NxsbFgKrT7pND5OiSphN+tFCztXtb
+Rl2ez0x+w4bTi+j28KDw0bju5Z2d117Kreu8bd85+PyvhuJy1+yRqplWsSXQz+th
+fOyb591d8Mf+5TFUqj0nYz7+6zXLcwOq1xI+vNBTcHiiLWW+z3wyuvFoYEdNb7Dr
+nm2a7lf7Oe9qJ2rPlGtc0UNtqe4bjorv9q7dnKh67sCBpJSOojHt2WNXoieq231K
+N35u+uDHttKGul/SicOvOss9p9Iu9YeFHLl4STrTdLUvJHdX0Tf5OzbVFgeqNdv7
+Bpfym6f+Ag==
+=7+Mt
+-----END PGP MESSAGE-----
+
+And finally, I am proving ownership of this host by posting or
+appending to this document.
+
+View my publicly-auditable identity here: https://keybase.io/schnuffi
+
+==================================================================
+
