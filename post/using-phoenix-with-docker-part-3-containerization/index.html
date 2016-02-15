@@ -1,0 +1,719 @@
+<html lang="en">
+<head>
+
+  
+  <meta charset="utf-8">
+  <title>Using Phoenix with docker, Part 3: Containerization</title>
+  <meta name="description" content="Using Phoenix with docker, Part 3: Containerization">
+  <meta name="author" content="Florian Kraft">
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="https://floriank.github.io/css/fonts.css">
+  
+  
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
+  
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
+
+  <link rel="stylesheet" href="https://floriank.github.io/css/custom.css">
+
+  
+  
+  <link rel="stylesheet" href="https://floriank.github.io/highlight/styles/default.css">
+  
+  <script src="https://floriank.github.io/highlight/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+</head>
+<body>
+
+
+<div class="header pure-g">
+    <div class="pure-u-1-24 pure-u-md-5-24"></div>
+    <div class="pure-u-11-12 pure-u-md-5-8">
+        <div class="desktop pure-menu pure-menu-horizontal nav-menu">
+            
+            <a href="https://floriank.github.io/" class="site-title pure-menu-heading">Notes of an awful developer</a>
+            <ul class="pure-menu-list">
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/categories/development" class="pure-menu-link">Development</a>
+                </li>
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/about/" class="pure-menu-link">About</a>
+                </li>
+            </ul>
+        </div>
+        <div class="mobile pure-menu nav-menu">
+            <a href="https://floriank.github.io/" class="pure-menu-heading" id="toggle-home">Notes of an awful developer</a>
+            <a href="#" id="toggle-btn">&#9776;</a>
+            <ul class="pure-menu-list" id="toggle-content" style="display:none;">
+                
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/categories/development" class="pure-menu-link">Development</a>
+                </li>
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/about" class="pure-menu-link">About</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="pure-u-1-24 pure-u-md-1-6"></div>
+</div>
+
+
+<div class="pure-g">
+    <div class="pure-u-1-24 pure-u-md-5-24"></div>
+	<div class="pure-u-11-12 pure-u-md-5-8">
+        <div class="post">
+
+            <div class="post-title">
+                <p class="footnote">
+                    <time class="">2016-02-15</time>
+		            
+                    
+                    |
+                    
+                    
+
+                    
+                    categories:<a href="https://floriank.github.io/categories/development">development</a> 
+                    
+
+                    
+                </p>
+                <h1>Using Phoenix with docker, Part 3: Containerization</h1>
+            </div>
+
+            <div class="post-content">
+                
+
+<p><em>This is the final part of a three part series</em>: <a href="https://floriank.github.io/post/using-phoenix-with-docker-part-1-introduction/">Part 1</a> - <a href="https://floriank.github.io/post/using-phoenix-with-docker-part-2-implementation/">Part 2</a> - <strong>Part 3</strong></p>
+
+<p><strong>Note</strong>: I am using the latest <code>docker-compose</code> and the latest <code>docker-engine</code> later on in this post.</p>
+
+<h1 id="contents:8058a1d8ca608171d45c42d3c59fef01">Contents</h1>
+
+<!-- MarkdownTOC -->
+
+<ul>
+<li><a href="#composition">Composition</a></li>
+<li><a href="#kitteh-dockerfile">Kitteh Dockerfile</a></li>
+<li><a href="#database-connections">Database connections</a></li>
+<li><a href="#tearing-it-all-down">Tearing it all down</a>
+
+<ul>
+<li><a href="#container-structure">Container structure</a></li>
+<li><a href="#creating-the-volume-container">Creating the volume container</a></li>
+<li><a href="#docker-110">Docker 1.10</a></li>
+<li><a href="#configuring-nginx">Configuring nginx</a></li>
+<li><a href="#running-the-containers">Running the containers</a></li>
+<li><a href="#assets-and-images">Assets and images</a></li>
+</ul></li>
+<li><a href="#looking-back">Looking back</a>
+
+<ul>
+<li><a href="#cleaning-up">Cleaning up</a></li>
+</ul></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+
+<!-- /MarkdownTOC -->
+
+<p>So far, so good. We now have a working application that we want to containerize. At the moment, <a href="https://github.com/floriank/kitteh-phoenix/tree/05-resizing-cats">the application is feature complete</a>, but nothing interesting related to <code>docker</code> happened yet.</p>
+
+<p><a name="composition"></a></p>
+
+<h2 id="composition:8058a1d8ca608171d45c42d3c59fef01">Composition</h2>
+
+<p>Before actually starting with the Dockerfile of our own codebase, let&rsquo;s introduce a <a href="https://docs.docker.com/compose/overview/">docker compose</a> configuration, which is a YAML file called <code>docker-compose.yml</code>:</p>
+
+<pre><code class="language-yaml"># the database image
+db:
+  image: &quot;postgres:9.4&quot;
+  ports:
+    - &quot;5432:5432&quot;
+  environment:
+    POSTGRES_USER: kitteh
+    POSTGRES_PASSWORD: kitteh
+  volumes_from:
+    - dbdata
+
+# for persistance of database data
+dbdata:
+  image: &quot;postgres:9.4&quot;
+  volumes:
+    - /var/lib/postgres
+  command: &quot;true&quot;
+
+# the main image, this is the application
+web:
+  build: &quot;.&quot;
+  environment:
+    MIX_ENV: &quot;prod&quot;
+  ports:
+    - &quot;4000:4000&quot;
+  links:
+    - &quot;db:db&quot;
+</code></pre>
+
+<p>This is the naive route to take, we provide a container for the database, using the official postgres image, then use the same image for a db layer to achieve actual persistance by mounting the volumes from it into the first database image.</p>
+
+<p>The application image by itself will not be buildable at the moment since it has no <code>Dockerfile</code> yet, so running</p>
+
+<pre><code class="language-bash">docker-compose up
+</code></pre>
+
+<p>should pull the database related image, but then crash as the build commend fails. Or it fails as the port cannot be bound to, since you may have a local PostgreSQL instance running:</p>
+
+<pre><code class="language-bash">Starting kitteh_dbdata_1...
+Recreating kitteh_db_1...
+Building web...
+Cannot locate specified Dockerfile: Dockerfile
+</code></pre>
+
+<p>No matter what, we should think about our applications <code>Dockerfile</code>.</p>
+
+<p><a name="kitteh-dockerfile"></a></p>
+
+<h2 id="kitteh-dockerfile:8058a1d8ca608171d45c42d3c59fef01">Kitteh Dockerfile</h2>
+
+<p>Remmembering the <a href="#todo">section about resizing in part 2</a> earlier, we know that we have at least the dependency of ImageMagick besides the actual Erlang VM and OTP to provide.</p>
+
+<p>What do we have to ensure that our whole system works? Here is a checklist:</p>
+
+<ul>
+<li>all dependencies must be available as/in containers somehow</li>
+<li>database must be migratable and migrated to a point where it is usable</li>
+<li>ideally, assets are built and served via a separate process</li>
+</ul>
+
+<p>Looking at the checklist, here are the dependencies we have:</p>
+
+<ul>
+<li>Erlang and OTP</li>
+<li>Elixir, <code>hex</code> and <code>mix</code></li>
+<li>ImageMagick</li>
+<li>PostgreSQL</li>
+<li>nginx</li>
+</ul>
+
+<p>For the moment, docker image sizes should not be our concern. My personal preference would be to have the most minimal footprint possible when it comes to the images, but we should focus on getting things working now:</p>
+
+<pre><code class="language-bash">FROM ubuntu:14.04.3
+# [...]
+</code></pre>
+
+<p>Should be simple enough. Yes, we are using the <a href="https://hub.docker.com/_/ubuntu/">Ubuntu image</a>. I know it&rsquo;s huge (~200MB) and it will become even larger with dependencies - but that should not stop us from using it locally.</p>
+
+<p>Installing the Elixir, OTP and ImageMagick dependencies should be easy, thanks to <code>apt-get</code>:</p>
+
+<pre><code class="language-bash">FROM ubuntu:14.04.3
+
+# Set the locale, otherwise elixir will complain later on
+RUN locale-gen en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
+
+# wget for convenience, use curl if you want to
+RUN apt-get -y -q install wget
+
+# add erlang otp
+RUN wget https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb
+RUN dpkg -i erlang-solutions_1.0_all.deb
+RUN apt-get update
+RUN apt-get install -y -q imagemagick esl-erlang elixir
+ADD . /app
+WORKDIR /app
+RUN mix local.hex --force
+RUN mix deps.get --only-prod
+RUN mix compile
+CMD [&quot;mix&quot;, &quot;phoenix.server&quot;]
+</code></pre>
+
+<p>Okay, not <em>straight</em> forward, but at least simple - it&rsquo;s quite a lot of stuff to pack into the image. In the end it will be around ~500MB in size. It&rsquo;s not too bad, considering a lot of layers can be reused later on, but it&rsquo;s quite much, especially if you want to upload it to a hub.</p>
+
+<p>Well, running it in combination with <code>docker-compose</code> should now yield results:</p>
+
+<pre><code class="language-bash">docker-compose up
+Starting d239c7b138_kitteh_dbdata_1...
+kitteh_db_1 is up-to-date
+Recreating kitteh_web_1...
+Attaching to d239c7b138_kitteh_dbdata_1, kitteh_db_1, kitteh_web_1
+db_1     | LOG:  database system was shut down at 2016-02-13 18:34:32 UTC
+db_1     | LOG:  MultiXact member wraparound protections are now enabled
+db_1     | LOG:  database system is ready to accept connections
+db_1     | LOG:  autovacuum launcher started
+db_1     | LOG:  received smart shutdown request
+db_1     | LOG:  autovacuum launcher shutting down
+db_1     | LOG:  shutting down
+db_1     | LOG:  database system is shut down
+db_1     | LOG:  database system was shut down at 2016-02-13 18:43:57 UTC
+db_1     | LOG:  MultiXact member wraparound protections are now enabled
+db_1     | LOG:  autovacuum launcher started
+db_1     | LOG:  database system is ready to accept connections
+db_1     | LOG:  received smart shutdown request
+db_1     | LOG:  autovacuum launcher shutting down
+db_1     | LOG:  shutting down
+db_1     | LOG:  database system is shut down
+db_1     | LOG:  database system was shut down at 2016-02-13 18:50:18 UTC
+db_1     | LOG:  MultiXact member wraparound protections are now enabled
+db_1     | LOG:  autovacuum launcher started
+db_1     | LOG:  database system is ready to accept connections
+web_1    | [info] Running Kitteh.Endpoint with Cowboy on http://localhost:4000
+web_1    | [error] Could not start watcher because &quot;node&quot; is not available. Your Phoenix application is still running, however assets...
+</code></pre>
+
+<p>We forgot assets. We&rsquo;ll deal with it down the road. For now, visisting your <a href="http://localhost:4000">localhost</a> should yield the original web application we created earlier - at least it&rsquo;s first page.</p>
+
+<p>Uploading shouldn&rsquo;t work - there is no migrated database yet and you should get a connection error when trying to upload a picture.</p>
+
+<p>If you are to lazy to create your own <code>Dockerfile</code>, please see the tag <code>06-dockerizing-kitties</code> <a href="https://github.com/floriank/kitteh-phoenix/tree/06-dockerizing-kitties">here</a>.</p>
+
+<p><a name="database-connections"></a></p>
+
+<h2 id="database-connections:8058a1d8ca608171d45c42d3c59fef01">Database connections</h2>
+
+<p>We should see if we can make the database work.</p>
+
+<p>The database images used at the moment utilize <a href="https://hub.docker.com/_/postgres/">the official postgres image</a>. The <code>docker-compose.yml</code> file will set environment variables that should correspond to the values in your local <code>prod.secret.exs</code> file.</p>
+
+<p><strong>Tip</strong>: Read environment variables into that configuration like this:</p>
+
+<pre><code class="language-ruby"># ./config/prod.secret.exs
+# [...]
+# Configure your database
+config :kitteh, Kitteh.Repo,
+  adapter: Ecto.Adapters.Postgres,
+  hostname: &quot;db&quot;, # see the links section in docker-compose.yml for the name
+  username: System.get_env(&quot;DB_USER&quot;)
+  password: System.get_env(&quot;DB_PASSWORD&quot;),
+  database: &quot;kitteh_prod&quot;,
+  pool_size: 20
+</code></pre>
+
+<p>For our use case this can stay hard coded as this file is <a href="https://github.com/floriank/kitteh-phoenix/blob/06-dockerizing-kitties/.gitignore#L28">not checked into git anyway</a>. It might be different if one would choose to utilize a CI.</p>
+
+<p>However, making sure that the database is reachable is key, since we need to migrate it (the database image actually already contains a database named after the environment <a href="https://github.com/floriank/kitteh-phoenix/blob/06-dockerizing-kitties/docker-compose.yml#L7">variable set here</a> - come to think of it, it should probably <a href="https://github.com/floriank/kitteh-phoenix/commit/07146c2b2c0a141d98ca821856802dacf7a7b075">be the same as in the configuration</a>)</p>
+
+<p><strong>Note</strong>: I encountered some problems when trying to use the <code>$POSTGRES_DB</code> variable. for some reason it always fell back to the <code>$POSTGRES_USER</code>. I have not yet figured out why. These problems <em>only</em> occured while using the version 1 of the compose configuration.</p>
+
+<p>Long story short, if we run</p>
+
+<pre><code class="language-bash"># use -d for detached mode
+docker-compose up
+</code></pre>
+
+<p>we can attach to the running docker container using <code>exec</code> like this:</p>
+
+<pre><code class="language-bash"># container name may vary
+docker exec -it kitteh_web_1 /bin/bash
+</code></pre>
+
+<p>or</p>
+
+<pre><code class="language-bash">docker-compose run web /bin/bash
+</code></pre>
+
+<p>and then run</p>
+
+<pre><code class="language-bash"># add MIX_ENV=prod if you did not change the docker-compos.yml entry
+mix ecto.migrate
+</code></pre>
+
+<p>inside the container to finally migrate the database. If this fails, try to make sure that <code>$MIX_ENV</code> is set to <code>prod</code> in the environment.</p>
+
+<p>If we now try to upload a picture again, it <em>should</em> work. You can of course always run migrations using</p>
+
+<pre><code>docker-compose run web mix ecto.migrate
+</code></pre>
+
+<p>directly.</p>
+
+<p><a name="tearing-it-all-down"></a></p>
+
+<h2 id="tearing-it-all-down:8058a1d8ca608171d45c42d3c59fef01">Tearing it all down</h2>
+
+<p>If we restart our composition, we should take note that our database data should have been persisted. But if we reload the image url we just generated, the image will be gone, as the actual images are not persisted in the container.</p>
+
+<p>Since we ignored assets completely so far, it&rsquo;s now time to give this a more serious thought.</p>
+
+<p>First, we add an <code>nginx</code> entry to our <code>docker-compose.yml</code> (I chose the <a href="https://hub.docker.com/_/nginx/">official image</a>):</p>
+
+<pre><code class="language-yaml"># [...]
+nginx:
+  image: &quot;nginx:1.9.11&quot;
+  # [...]
+  # now what?
+</code></pre>
+
+<p><a name="container-structure"></a></p>
+
+<h3 id="container-structure:8058a1d8ca608171d45c42d3c59fef01">Container structure</h3>
+
+<p>Let&rsquo;s talk about the basic idea first:</p>
+
+<p>We&rsquo;ll use a data volume container that can be used by both the not-yet-existing <code>nginx</code> container, as well as the existing <code>web</code> container. The <code>web</code>container will write to the data volume container, the <code>nginx</code> container will read the data and serve it appropiately. With this, we can individually backup the data container if we wanted to and the data is persisted.</p>
+
+<p>Here is the checklist:</p>
+
+<ol>
+<li>Create a data container with volumes for both <code>web</code> and <code>nginx</code> containers.</li>
+<li>Mount volumes into both containers</li>
+<li>Create an <code>nginx</code> container that has a site config for serving the contents of the volume mounted</li>
+</ol>
+
+<p><a name="creating-the-volume-container"></a></p>
+
+<h3 id="creating-the-volume-container:8058a1d8ca608171d45c42d3c59fef01">Creating the volume container</h3>
+
+<p>Before we add our container, we should reevaluate where exactly we want to store our images.</p>
+
+<p>Inside the container, the current <code>uploads</code> folder resides within <code>_build/prod/lib/kitteh/priv/static/uploads</code>. That&rsquo;s quite a handful to type.</p>
+
+<p>So let&rsquo;s change that first. Luckily, we only have to change the <code>target_path</code> function in the <code>page_controller.ex</code>:</p>
+
+<pre><code class="language-ruby"># ./web/controllers/page_controller.ex
+# [...]
+  defp target_path do
+    if Mix.env == :prod do
+      &quot;/var/uploads/&quot;
+    else
+      Application.app_dir(:kitteh, &quot;priv&quot;) &lt;&gt; &quot;/static/uploads/&quot;
+    end
+  end
+</code></pre>
+
+<p>We&rsquo;ll create another container in our <code>docker-compose.yml</code> that is built from scratch:</p>
+
+<pre><code class="language-yaml"># [...]
+assets:
+  image: &quot;busybox&quot;
+  volumes:
+    - /var/uploads
+  command: &quot;true&quot;
+</code></pre>
+
+<p>If everything went well, the images should be preserved between container restarts.</p>
+
+<p>We can now create an nginx docker image. We&rsquo;re going to use a custom Dockerfile to do so - we can store it alongside the codebase.</p>
+
+<p><a name="docker-110"></a></p>
+
+<h3 id="docker-1-10:8058a1d8ca608171d45c42d3c59fef01">Docker 1.10</h3>
+
+<p>This is where things get interesting - Docker <a href="https://blog.docker.com/2016/02/docker-1-10/">was recently updated to v1.10.0</a> - and along with it came an update to <code>docker-compose</code> with a new version of the syntax, allowing for custom dockerfile directives in the <code>build</code> object of the configuration.</p>
+
+<p>I decided to give it a spin. At this point you&rsquo;ll have to upgrade as well, otherwise you cannot use the version 2 of the configuration syntax.</p>
+
+<p><strong>Note</strong>: If you do not want to upgrade, you can always build yourself a local image using the <code>Dockerfile.nginx</code> and update the version 1 <code>docker-compose.yml</code> accordingly.</p>
+
+<p>The updated configuration can be found <a href="https://github.com/floriank/kitteh-phoenix/commit/f8188c8130a61f2131dc843982d23e1f30e1eb6f">in this commit</a>.</p>
+
+<p><a name="configuring-nginx"></a></p>
+
+<h3 id="configuring-nginx:8058a1d8ca608171d45c42d3c59fef01">Configuring nginx</h3>
+
+<p>I went with a super simple <a href="https://github.com/floriank/kitteh-phoenix/commit/080baab1abe78f2d3f508c0b3eede7c6182a0d09">nginx configuration file</a>, which is bogus, but should work nonetheless.</p>
+
+<p><a name="running-the-containers"></a></p>
+
+<h3 id="running-the-containers:8058a1d8ca608171d45c42d3c59fef01">Running the containers</h3>
+
+<p>A simple</p>
+
+<pre><code>docker-compose up
+</code></pre>
+
+<p>should bring up our creation. I also tagged <a href="https://github.com/floriank/kitteh-phoenix/tree/07-composing-kittehs">this point of development for your convenience if you do not wish to code along</a>.</p>
+
+<p><a name="assets-and-images"></a></p>
+
+<h3 id="assets-and-images:8058a1d8ca608171d45c42d3c59fef01">Assets and images</h3>
+
+<p>Wait, what about assets? We still get something along the lines of</p>
+
+<pre><code class="language-bash">[error] Could not find static manifest at &quot;/app/_build/prod/lib/kitteh/priv/static/manifest.json&quot;. Run &quot;mix phoenix.digest&quot; after building your static files or remove the configuration from &quot;config/prod.exs.&quot;
+</code></pre>
+
+<p>in the logs.</p>
+
+<p>And what about actually serving the images? With out current setup, the <code>nginx</code> will use the mounted volume under its own <code>/var/uploads</code> to serve the content of this volume. Running</p>
+
+<pre><code class="language-bash">docker-compose run nginx ls -l /var/uploads
+</code></pre>
+
+<p>should yield a list of images. The <code>nginx</code> container itself is exposed at port <code>4001</code> - thanks to the <a href="https://github.com/floriank/kitteh-phoenix/blob/080baab1abe78f2d3f508c0b3eede7c6182a0d09/docker-compose.yml#L24">configuration yaml</a>.</p>
+
+<p>So, assuming a file named <code>LargeSuperbYellowTurkishAngora.jpeg</code> actually exists in the data container a simple</p>
+
+<pre><code class="language-bash">http get http://localhost:4001/LargeSuperbYellowTurkishAngora.jpeg
+</code></pre>
+
+<p>should give the image back to you. If you are not using <a href="https://github.com/jkbrzt/httpie">httpie</a> yet, I do recommend it!</p>
+
+<p>So, for now, we can use this and modify our code, specifically the view that renders the image url (called <code>asset_url</code>):</p>
+
+<pre><code class="language-ruby"># /web/views/page_view.ex
+  def asset_url(image) do
+    &quot;/img/&quot; &lt;&gt; image.token
+  end
+</code></pre>
+
+<p>One of the drawbacks of not having an asset pipeline similar to Rails is that we cannot specify an integrated asset host (that is <strong>not</strong> completely true, as we can easily just reuse an <code>Application</code> or environment variable for that). However, it&rsquo;s not as simple as just changeing <code>config.host</code> in your <code>production.rb</code>, as the pipeline is not entangled with the framework.</p>
+
+<p>But that will not stop us, even if it means hardcoding values:</p>
+
+<pre><code class="language-ruby"># /web/views/page_view.ex
+  def asset_url(image)
+    &quot;http://localhost:4001/&quot; &lt;&gt; Path.basename(image.path) 
+  end
+</code></pre>
+
+<p>In a production environment, I would probably assign a real subdomain name, like &ldquo;images.kitt.eh&rdquo; or something along these lines.</p>
+
+<p>Rebuilding and restarting the containers should now present the very same image, but served from the nginx container.</p>
+
+<p><strong>Note</strong>: At this point I noticed a flaw in the <code>Dockerfile</code> for the main application - Compilation was not done properly, so I had to reintroduce an env variable to <a href="https://github.com/floriank/kitteh-phoenix/commit/362cb0eae4553c418b4729822429a3d324959cc7">mark production compilation</a>.</p>
+
+<h4 id="assets:8058a1d8ca608171d45c42d3c59fef01">Assets</h4>
+
+<p>Phoenix purposefully does not integrate an asset pipeline and instead delegates to a library called <code>brunch</code> (see <a href="https://brunch.io">brunch.io</a>) to handle static assets like JavaScript and CSS.</p>
+
+<p>I personally disagree with the choice of brunch - I&rsquo;d have used webpack myself, but one cannot be too picky when others provide work that is essentially free.</p>
+
+<p>Anyway, we have different options for solving the assets problem domain:</p>
+
+<ol>
+<li>Reusing the nginx container (and having the assets land on &ldquo;image.kitt.eh&rdquo;)</li>
+<li>Introducing a second nginx container (and introducing &ldquo;assets.kitt.eh&rdquo; in proudction)</li>
+<li><s>Serve everything via the web stack.</s></li>
+<li>Serve everything via a CDN.</li>
+</ol>
+
+<p>I am not really going to talk about option number 4. Using a CDN (like Cloudfront) is usually the way to go with bigger production setups as you just cannot match the server infrastructure that is provided to you via these services.</p>
+
+<p>I am inclined to use option number 2. Assets and images should be different in my opinion and - and that is even more crucial to me - updating the assets should not affect the data within the uploads container. Depending on your requirements, option 3 should also be a very possible solution.</p>
+
+<p>However, let&rsquo;s introduce a third <code>Dockerfile</code>, called <code>Dockerfile.assets</code> (we also rename the existing <code>Dockerfile.nginx</code> to <code>Dockerfile.uploads</code>):</p>
+
+<pre><code class="language-Dockerfile">FROM nginx:1.9.11
+# override the default nginx config with our own
+ADD nginx.assets.conf /etc/nginx/nginx.conf
+RUN mkdir /logs
+EXPOSE 80
+CMD [&quot;nginx&quot;, &quot;-g&quot;, &quot;daemon off;&quot;]
+</code></pre>
+
+<p>It&rsquo;s essentially the same one as for uploads. The <code>nginx.conf</code> looks similar as well, but defines proper mimetypes for all the sublocations (css &amp; js).</p>
+
+<p>I <a href="https://github.com/floriank/kitteh-phoenix/commit/fa45cac9807a841911bd3d691cdf031fbe50042b">also updated</a> the <code>docker-compose.yml</code> accordingly to include the second nginx to serve assets later on.</p>
+
+<p>We run into a problem here: so far we just assumend that all the assets are there, ready to go - however, we cannot run <code>brunch build --production</code>, as this is an <code>npm</code> dependency. Up until now, we just assumed it was there, as we had it installed anyway. However, a fresh clone of the repo cannot assume that. To keep it a bit shorter, I will omit the steps necessary to make this work, but to give you an idea, here are the options you&rsquo;d have:</p>
+
+<ol>
+<li>Install <code>nodejs</code> in the web container (bloating it even more) and then run <code>npm install</code> in it (bloating it even more). This might be an option if you want everything self-contained and ready to go after cloning the repo</li>
+<li>Live with it and require the user (or a CI for that matter) to have node installed on their system when building the image</li>
+</ol>
+
+<p>I chose option 2 for this exercise and <a href="https://github.com/floriank/kitteh-phoenix/commit/12c83f235321ae172259072cab8f85012c2cb3a1">documented it in the README</a>.</p>
+
+<p>Unfortunately, I found digesting all the assets and then putting them into <code>/var/assets</code> at buildtime impossible, as this requires all the containers to be up.</p>
+
+<p>Thereby running</p>
+
+<pre><code class="language-bash">docker-compose run web mix phoenix.digest -o /var/assets
+</code></pre>
+
+<p>is crucical for this to work and can only be done when the containers are running.</p>
+
+<p><strong>Note</strong>: A solution to this is to invert the dependency and build the separate nginx container with the digested assets in it, mounting its volumes into the web container later on.</p>
+
+<p>However, asset digestion can be done on demand this way - the volume container will just keep the last version of the digested assets.</p>
+
+<p>Running the containers now should ideally provide the static assets already:</p>
+
+<pre><code class="language-bash"># the hash may vary
+http get http://localhost:4002/js/app-&lt;hash&gt;.js
+</code></pre>
+
+<p>should yield our JavaScript. Same goes for our css.</p>
+
+<p>We also need to update our <code>prod.exs</code> environment to make the manifest file known:</p>
+
+<pre><code class="language-ruby"># /config/prod.exs
+  config :kitteh, Kitteh.Endpoint,
+    http: [port: {:system, &quot;PORT&quot;}],
+    url: [host: &quot;example.com&quot;, port: 80],
+    cache_static_manifest: &quot;/var/assets/manifest.json&quot;
+</code></pre>
+
+<p>The asset paths in <code>app.html.eex</code> have to be updated to make this work with the nginx serving our assets (remember, this would be &ldquo;assets.kitt.eh&rdquo; in production):</p>
+
+<pre><code class="language-html">&lt;!-- /web/templates/layout/app.html.eex --&gt;
+
+&lt;!-- [...] --&gt;
+&lt;link rel=&quot;stylesheet&quot; href=&quot;&lt;%= static_url(@conn, &quot;/css/app.css&quot;) %&gt;&quot;&gt;
+&lt;!-- [...] --&gt;
+&lt;script src=&quot;&lt;%= static_url(@conn, &quot;/js/app.js&quot;) %&gt;&quot;&gt;&lt;/script&gt;
+</code></pre>
+
+<p>This requires a small addition to <code>prod.exs</code> (<code>static_url</code>):</p>
+
+<pre><code class="language-ruby"># /config/prod.exs
+config :kitteh, Kitteh.Endpoint,
+  http: [port: {:system, &quot;PORT&quot;}],
+  url: [host: &quot;example.com&quot;, port: 80],
+  static_url: [host: &quot;localhost&quot;, port: 4002],
+  cache_static_manifest: &quot;var/assets/manifest.json&quot;
+</code></pre>
+
+<p>Rebuilding and running our containers again should now yield results - all the uploaded images are served from an nginx and all of the assets are served from another. also, everything is persisted independently.</p>
+
+<p>Neat.</p>
+
+<p>For your convenience, I <a href="https://github.com/floriank/kitteh-phoenix/tree/08-serving-static-content">added a tag here</a> so that you can compare progress yourselves.</p>
+
+<p><a name="looking-back"></a></p>
+
+<h2 id="looking-back:8058a1d8ca608171d45c42d3c59fef01">Looking back</h2>
+
+<p>We have done a lot so far. We <a href="https://floriank.github.io/post/using-phoenix-with-docker-part-2-implementation/">coded a small uploader application</a> and put most of the dependencies into containers.</p>
+
+<p>Here is the list of containers used:</p>
+
+<ol>
+<li>A PostgreSQL for persistance</li>
+<li>An nginx for serving uploaded images</li>
+<li>A second nginx for serving static assets like JavaScript and CSS</li>
+<li>A web application container that holds the application</li>
+</ol>
+
+<p>There are also 3 volume containers that are used to share data between the containers and provide persistance.</p>
+
+<p><a name="cleaning-up"></a></p>
+
+<h3 id="cleaning-up:8058a1d8ca608171d45c42d3c59fef01">Cleaning up</h3>
+
+<p>We do have some prolems with the setup as well:</p>
+
+<ul>
+<li>This might be overkill for such a small application and you should consider bare metal for this setup (or Heroku if you feel so inclined)</li>
+<li>The web application container is <em>huge</em></li>
+<li>Two nginx are not necessarily better than one</li>
+<li>There is no proper configuration management yet - most of the stuff we need is hardcoded either in our application or the docker files.</li>
+</ul>
+
+<p>In fact, let&rsquo;s clean up some problems right here, right now. Introduce a <code>.dockerignore</code> file and add the following list of patterns:</p>
+
+<pre><code class="language-bash"># Generate on crash by the VM
+erl_crash.dump
+
+# Static artifacts
+node_modules/
+</code></pre>
+
+<p>That reduces the <code>web</code> images size <strong>by about 4MB</strong>, as the <code>node_modules</code> are not needed in the image. Woah.</p>
+
+<p>The problem here is that we are using a full <a href="https://github.com/floriank/kitteh-phoenix/blob/08-serving-static-content/Dockerfile#L1">Ubuntu image</a> (which I chose for convenience reasons like installing via <code>apt-get</code>). For procatical purposes we should probably use an <a href="http://www.alpinelinux.org/">alpine</a>-based image to build our application container.</p>
+
+<p>There is also SSL yet, we&rsquo;re purely on relying on HTTP - which is not a production setup I would endorse in 2016.</p>
+
+<p>Finally, our main attention should probably also focus on removing items from the codebase in the web container that we do not need - mainly the actual codebase, as Elixir compiles to BEAM code and we would only need that. Just for comparison, we are talking about 18MB in the case of kitteh.</p>
+
+<p>It depends on how much convenience you want - ultimately, reducing tha base image size should be the <strong>first</strong> goal in my opinion.</p>
+
+<p><a name="conclusion"></a></p>
+
+<h2 id="conclusion:8058a1d8ca608171d45c42d3c59fef01">Conclusion</h2>
+
+<p>If you read this far - thanks! I hope you found the material I provided interesting and you can take something away for your own projects.</p>
+
+<p>If there are questions for this particular series, you can either write me an email or use <a href="https://github.com/floriank/kitteh-phoenix/issues">the issues for the project on Github</a>. Being not a very skillful Elixir developer, I am always thankful for <a href="https://github.com/floriank/kitteh-phoenix/pulls">Pull Requests</a> and comments.</p>
+
+<p>You have reached the end of this series. You might be interested in <a href="https://floriank.github.io/post/using-phoenix-with-docker-part-1-introduction/">how everything started</a> and how it <a href="https://floriank.github.io/post/using-phoenix-with-docker-part-2-implementation/">turned out to be implemented after all</a>.</p>
+
+            </div>
+        </div>
+	</div>
+    <div class="pure-u-1-24 pure-u-md-1-6"></div>
+</div>
+
+<div class="footer pure-g">
+    <div class="pure-u-1-24 pure-u-md-5-24"></div>
+    <div class="pure-u-11-12 pure-u-md-5-8">
+        <div class="pure-menu pure-menu-horizontal footer-content">
+            <ul>
+                <li class="pure-menu-heading" id="foot-name">Florian Kraft:</li>
+
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://github.com/floriank" class="pure-menu-link">GitHub</a>
+                </li>
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://www.linkedin.com/in/floriankraft" class="pure-menu-link">LinkedIn</a>
+                </li>
+                
+
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://twitter.com/carhillion" class="pure-menu-link">Twitter</a>
+                </li>
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://stackoverflow.com/users/498226/florian" class="pure-menu-link">Stack Overflow</a>
+                </li>
+                
+                <li class="pure-menu-item right">
+                  <a class="pure-menu-link" href="https://github.com/gizak/nofancy/">Theme based on the most excellent nofancy theme</a>
+                </li>
+            </ul>
+            <a href="#" class="pure-menu-heading pull-right" id="gototop-btn">↑↑</a>
+        </div>
+	  </div>
+      <div class="pure-u-1-24 pure-u-md-1-6"></div>
+</div>
+
+
+<script src="https://floriank.github.io/js/jquery.min.js" type="text/javascript"></script>
+<script src="https://floriank.github.io/js/jquery.timeago.js" type="text/javascript"></script>
+<script type="text/javascript">
+  $(function(){
+    $("time.timeago").timeago();
+  })
+  $("#toggle-btn").click(function(){
+    $("#toggle-content").toggle();
+    if($(this).html() === "☰") {
+        $(this).html("X")
+    } else {
+        $(this).html("☰")
+    }
+  });
+  $(window).resize(function(){
+    if(window.innerWidth > 768) {
+      $(".desktop").removeAttr("style");
+    }
+  });
+</script>
+
+</body>
+</html>
+

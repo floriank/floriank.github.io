@@ -1,0 +1,287 @@
+<html lang="en">
+<head>
+
+  
+  <meta charset="utf-8">
+  <title>Using Phoenix with docker, Part 1: Introduction</title>
+  <meta name="description" content="Using Phoenix with docker, Part 1: Introduction">
+  <meta name="author" content="Florian Kraft">
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="https://floriank.github.io/css/fonts.css">
+  
+  
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
+  
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
+
+  <link rel="stylesheet" href="https://floriank.github.io/css/custom.css">
+
+  
+  
+  <link rel="stylesheet" href="https://floriank.github.io/highlight/styles/default.css">
+  
+  <script src="https://floriank.github.io/highlight/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+</head>
+<body>
+
+
+<div class="header pure-g">
+    <div class="pure-u-1-24 pure-u-md-5-24"></div>
+    <div class="pure-u-11-12 pure-u-md-5-8">
+        <div class="desktop pure-menu pure-menu-horizontal nav-menu">
+            
+            <a href="https://floriank.github.io/" class="site-title pure-menu-heading">Notes of an awful developer</a>
+            <ul class="pure-menu-list">
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/categories/development" class="pure-menu-link">Development</a>
+                </li>
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/about/" class="pure-menu-link">About</a>
+                </li>
+            </ul>
+        </div>
+        <div class="mobile pure-menu nav-menu">
+            <a href="https://floriank.github.io/" class="pure-menu-heading" id="toggle-home">Notes of an awful developer</a>
+            <a href="#" id="toggle-btn">&#9776;</a>
+            <ul class="pure-menu-list" id="toggle-content" style="display:none;">
+                
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/categories/development" class="pure-menu-link">Development</a>
+                </li>
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/about" class="pure-menu-link">About</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="pure-u-1-24 pure-u-md-1-6"></div>
+</div>
+
+
+<div class="pure-g">
+    <div class="pure-u-1-24 pure-u-md-5-24"></div>
+	<div class="pure-u-11-12 pure-u-md-5-8">
+        <div class="post">
+
+            <div class="post-title">
+                <p class="footnote">
+                    <time class="">2016-02-15</time>
+		            
+                    
+                    |
+                    
+                    
+
+                    
+                    categories:<a href="https://floriank.github.io/categories/development">development</a> 
+                    
+
+                    
+                </p>
+                <h1>Using Phoenix with docker, Part 1: Introduction</h1>
+            </div>
+
+            <div class="post-content">
+                
+
+<p><em>This is part one of a three part series</em>: <strong>Part 1</strong> - <a href="https://floriank.github.io/post/using-phoenix-with-docker-part-2-implementation/">Part 2</a> - <a href="https://floriank.github.io/post/using-phoenix-with-docker-part-3-containerization/">Part 3</a></p>
+
+<p><em>This part is an introduction to the project - consider <a href="https://floriank.github.io/post/using-phoenix-with-docker-part-2-implementation/">skipping to part 2</a> if you do want some code</em></p>
+
+<h1 id="contents:7ae9b8d0f921bacfe0c6da25116272e8">Contents</h1>
+
+<!-- MarkdownTOC -->
+
+<ul>
+<li><a href="#using-phoenix--elixir">Using Phoenix &amp; Elixir</a></li>
+<li><a href="#using-docker">Using docker</a></li>
+<li><a href="#project-kitteh">Project Kitteh</a></li>
+<li><a href="#continuing">Continuing</a></li>
+</ul>
+
+<!-- /MarkdownTOC -->
+
+<p>A <a href="https://kholbekj.surge.sh">colleague of mine</a> will not shut up about <a href="https://elixir-lang.org">this</a>.</p>
+
+<p>Working at a company using Ruby for day to day work, Elixir seems pretty appealing. And since I tried out <a href="http://learnyouahaskell.com/">Haskell</a> some years ago it seems kind of familiar. Especially since I didn&rsquo;t really grasp the advantage of function pipelines and data structures back then. Also, working with PHP was so convenient at the time. I do recommend checking out Haskell at least once in your life, even though it&rsquo;s (visible) presence in modern web development is slim.</p>
+
+<p>Waking up from that hellish nightmare of Magento-based shop systems, I found myself working with Ruby (and Rails) a lot. Ruby is nice enough, but like every nice language it has some major problems of its own, like a missing language specification. Rails on top of it does make rapid development a joy, but its conventions are debatable and I&rsquo;d argue that for everything good it brought us, it kicked us in the groin somewhere else (Looking at you, Turbolinks).</p>
+
+<p>Rails introduced a lot of structure to web projects (seeing that web frameworks in other languages adopt to the same and or similiar structure), but, as most people I work with tell me these days, <em>&ldquo;it&rsquo;s time to move on&rdquo;</em>.</p>
+
+<p>So - Elixir will make everything magically better, right?</p>
+
+<p>Probably not.</p>
+
+<p>Show me a new &ldquo;advanced&rdquo; technology everyone praises, I&rsquo;ll show you at least one developer who is able to screw things up in your project with it.</p>
+
+<p>A good measure of a new language - to me - therefore would be how strongly you have to stick to the idioms that the language provides to solve your problems. Granted, this requires reflection on one&rsquo;s own side to determine which kind of problems are to be solved. But that is just me rambling on what programming actually is, besides writing the code.</p>
+
+<p><a name="using-phoenix--elixir"></a></p>
+
+<h2 id="using-phoenix-elixir:7ae9b8d0f921bacfe0c6da25116272e8">Using Phoenix &amp; Elixir</h2>
+
+<p>Introduce Elixir. Elixir runs on the <a href="https://www.wikiwand.com/en/Erlang_(programming_language)">Erlang</a> VM called BEAM. Being almost as old as myself (the first version of it was released in 1986), it&rsquo;s one of the pieces of software that have been around so long it&rsquo;s practically optimized to a degree that no recently created project is able to attain.</p>
+
+<p>The fans usually pull out the <a href="http://www.wired.com/2015/09/whatsapp-serves-900-million-users-50-engineers/">WhatsApp example here</a>. On one hand this has to do with the Erlang VM being extremly well optimized and well maintained. On the other hand the <a href="https://www.quora.com/How-is-FreeBSDs-network-stack-superior-to-that-of-Linux">network stack of FreeBSD</a> is a beast by itself. I confess I never looked into it, but I hear the praise from over the hills.</p>
+
+<p>Using Erlang is a good idea apparently and Elixir makes it easier, because it packages it all in a more Ruby-esque, more &ldquo;friendly&rdquo; syntax. We can relate and do the same thing we always do - building our applications. Can&rsquo;t be that different from the JVM, can it now? We got used to <a href="https://jruby.org">jRuby</a>. And I think that one gal in the basement is still using and maintaining her own fork of <a href="https://ironruby.net">IronRuby</a>. She does not come to Christmas parties anymore.</p>
+
+<p>Except we cannot - since Elixirs concepts are vastly different from what Ruby can provide you with. And you should keep that in mind - especially when starting out. I highly recommend <a href="https://pragprog.com/book/elixir12/programming-elixir-1-2">Dave Thomas&rsquo; book here</a> to start learning Elixir.</p>
+
+<p>But since we&rsquo;re doing web development, let&rsquo;s take a look at <a href="http://phoenixframework.org">Phoenix</a> - the &ldquo;Rails of the Elixir&rdquo; world. It promises to bring the joy Rails development (and the useful conventions that come with it) and eliminating some of the more inconvient Rails-isms.</p>
+
+<p><a name="using-docker"></a></p>
+
+<h2 id="using-docker:7ae9b8d0f921bacfe0c6da25116272e8">Using docker</h2>
+
+<p>Before diving into preparing a demo project let me quickly express that I find deployment of Phoenix/Elixir somewhat inconvenient. With Rails, you just use <a href="https://heroku.com">Heroku</a>. That can be hard on your budget though (or on your mental health, as the Asset pipeline made your slug size explode again). So you might go on and deploy on your own machines, deciding to hire a DevOps guy in the process and then silently weep how hard actual scalable deployment is and that it shouldn&rsquo;t come as an afterthought.</p>
+
+<p>At the time of writing, Elixir has less convenient options (from what I can tell), so containerization might be a solution to this problem. After all, this approach will shift responsibility for having the dependencies installed to you instead of relying on your administrator to do so.</p>
+
+<p><strong>Note</strong>: I am aware that Heroku supports Elixir these days. I have not tried it yet, but my assumption is that not everyone chooses the expensive and convenient lock-in that Heroku provides.</p>
+
+<p>So, I think it would be reasonable to try out some containers for the time being.</p>
+
+<p><a name="project-kitteh"></a></p>
+
+<h2 id="project-kitteh:7ae9b8d0f921bacfe0c6da25116272e8">Project Kitteh</h2>
+
+<p>So, let us prepare something cat related to containerize and deply somewhere.</p>
+
+<p><strong>Note</strong>: If you have not worked with Phoenix before, there are <a href="https://blog.codecentric.de/en/2016/01/elixir-phoenix-couchdb-introduction/">some excellent tutorials</a>, as <a href="http://hexdocs.pm/phoenix/Phoenix.html">well as documentation</a>. Naming can be a bit confusing, but when you&rsquo;re used to the gem names in the Ruby ecosystem, my best bet is that you can get used to it.</p>
+
+<p>Let&rsquo;s do it:</p>
+
+<pre><code class="language-bash">mix phonix.new kitteh &amp;&amp; cd kitteh
+</code></pre>
+
+<p>The project will do the following:</p>
+
+<ol>
+<li>Let the user upload a picture of a cat</li>
+<li>Present the user with a short, descriptive URL that they can share and that stays fixed forever&trade;</li>
+<li>Provide modifiers to the url to scale the image (<code>Tiny</code>, <code>Large</code>, <code>Monstrous</code>), being scaled to (<code>90x90</code>, <code>300x300</code>, <code>600x600</code>) - yes, quadratic.</li>
+</ol>
+
+<p>So, in practise, this should look as follows:</p>
+
+<ol>
+<li>User comes to url, uploads an image and get&rsquo;s redirected to <code>/CuteDomesticSavannahKitty</code></li>
+<li>User can now use <code>/TinyCuteDomesticSavannahKitty</code>, <code>/LargeCuteDomesticSavannahKitty</code> and <code>/MonstrousCuteDomesticSavannahKitty</code> to get the resized versions as well.</li>
+</ol>
+
+<p><strong>Please note</strong> that I am intentionally - and shamelessly - stealing the URL naming strategy from <a href="https://gfycat.com/">gfycat</a>.</p>
+
+<p>The project should work as a tech demo to provide and explain the following components:</p>
+
+<ul>
+<li>the user frontend (web application)</li>
+<li>data storage for images and their properties</li>
+<li>serving images in a somewhat efficient way</li>
+<li>a queue solution with job workers</li>
+</ul>
+
+<p>The project can be grabbed from <a href="https://github.com/floriank/kitteh-phoenix">its repository</a> if you are interested.</p>
+
+<p>Long story short: We&rsquo;re (probably) going to use these containers:</p>
+
+<ul>
+<li>PostgreSQL for database (one for postgres, one for persitant storage)</li>
+<li>Web Container running our Phoenix application</li>
+<li>nginx for serving static assets and uploaded images</li>
+</ul>
+
+<p><a name="continuing"></a></p>
+
+<h2 id="continuing:7ae9b8d0f921bacfe0c6da25116272e8">Continuing</h2>
+
+<p><a href="https://floriank.github.io/post/using-phoenix-with-docker-part-2-implementation/">In the next part</a>, we&rsquo;ll look into the application stack and discuss Phoenix a bit more in depth. If you are more impatient, consider <a href="https://floriank.github.io/post/using-phoenix-with-docker-part-3-containerization/">skipping directly to part 3</a> to see how the <code>Dockerfile</code>s of our components look like and what the <code>docker compose</code> process will be. Or if it even works.</p>
+
+            </div>
+        </div>
+	</div>
+    <div class="pure-u-1-24 pure-u-md-1-6"></div>
+</div>
+
+<div class="footer pure-g">
+    <div class="pure-u-1-24 pure-u-md-5-24"></div>
+    <div class="pure-u-11-12 pure-u-md-5-8">
+        <div class="pure-menu pure-menu-horizontal footer-content">
+            <ul>
+                <li class="pure-menu-heading" id="foot-name">Florian Kraft:</li>
+
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://github.com/floriank" class="pure-menu-link">GitHub</a>
+                </li>
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://www.linkedin.com/in/floriankraft" class="pure-menu-link">LinkedIn</a>
+                </li>
+                
+
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://twitter.com/carhillion" class="pure-menu-link">Twitter</a>
+                </li>
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://stackoverflow.com/users/498226/florian" class="pure-menu-link">Stack Overflow</a>
+                </li>
+                
+                <li class="pure-menu-item right">
+                  <a class="pure-menu-link" href="https://github.com/gizak/nofancy/">Theme based on the most excellent nofancy theme</a>
+                </li>
+            </ul>
+            <a href="#" class="pure-menu-heading pull-right" id="gototop-btn">↑↑</a>
+        </div>
+	  </div>
+      <div class="pure-u-1-24 pure-u-md-1-6"></div>
+</div>
+
+
+<script src="https://floriank.github.io/js/jquery.min.js" type="text/javascript"></script>
+<script src="https://floriank.github.io/js/jquery.timeago.js" type="text/javascript"></script>
+<script type="text/javascript">
+  $(function(){
+    $("time.timeago").timeago();
+  })
+  $("#toggle-btn").click(function(){
+    $("#toggle-content").toggle();
+    if($(this).html() === "☰") {
+        $(this).html("X")
+    } else {
+        $(this).html("☰")
+    }
+  });
+  $(window).resize(function(){
+    if(window.innerWidth > 768) {
+      $(".desktop").removeAttr("style");
+    }
+  });
+</script>
+
+</body>
+</html>
+

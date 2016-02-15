@@ -1,0 +1,675 @@
+<html lang="en">
+<head>
+
+  
+  <meta charset="utf-8">
+  <title>Using Phoenix with docker, Part 2: Implementation</title>
+  <meta name="description" content="Using Phoenix with docker, Part 2: Implementation">
+  <meta name="author" content="Florian Kraft">
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="https://floriank.github.io/css/fonts.css">
+  
+  
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
+  
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
+
+  <link rel="stylesheet" href="https://floriank.github.io/css/custom.css">
+
+  
+  
+  <link rel="stylesheet" href="https://floriank.github.io/highlight/styles/default.css">
+  
+  <script src="https://floriank.github.io/highlight/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+</head>
+<body>
+
+
+<div class="header pure-g">
+    <div class="pure-u-1-24 pure-u-md-5-24"></div>
+    <div class="pure-u-11-12 pure-u-md-5-8">
+        <div class="desktop pure-menu pure-menu-horizontal nav-menu">
+            
+            <a href="https://floriank.github.io/" class="site-title pure-menu-heading">Notes of an awful developer</a>
+            <ul class="pure-menu-list">
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/categories/development" class="pure-menu-link">Development</a>
+                </li>
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/about/" class="pure-menu-link">About</a>
+                </li>
+            </ul>
+        </div>
+        <div class="mobile pure-menu nav-menu">
+            <a href="https://floriank.github.io/" class="pure-menu-heading" id="toggle-home">Notes of an awful developer</a>
+            <a href="#" id="toggle-btn">&#9776;</a>
+            <ul class="pure-menu-list" id="toggle-content" style="display:none;">
+                
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/categories/development" class="pure-menu-link">Development</a>
+                </li>
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/about" class="pure-menu-link">About</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="pure-u-1-24 pure-u-md-1-6"></div>
+</div>
+
+
+<div class="pure-g">
+    <div class="pure-u-1-24 pure-u-md-5-24"></div>
+	<div class="pure-u-11-12 pure-u-md-5-8">
+        <div class="post">
+
+            <div class="post-title">
+                <p class="footnote">
+                    <time class="">2016-02-15</time>
+		            
+                    
+                    |
+                    
+                    
+
+                    
+                    categories:<a href="https://floriank.github.io/categories/development">development</a> 
+                    
+
+                    
+                </p>
+                <h1>Using Phoenix with docker, Part 2: Implementation</h1>
+            </div>
+
+            <div class="post-content">
+                
+
+<p><em>This is part two of a three part series</em>: <a href="https://floriank.github.io/post/using-phoenix-with-docker-part-1-introduction/">Part 1</a> - <strong>Part 2</strong> - <a href="https://floriank.github.io/post/using-phoenix-with-docker-part-3-containerization/">Part 3</a></p>
+
+<h1 id="contents:7debb73c6a3fd6f5aa2c2da8cbce28e8">Contents</h1>
+
+<!-- MarkdownTOC -->
+
+<ul>
+<li><a href="#installation">Installation</a>
+
+<ul>
+<li><a href="#elixir">Elixir</a></li>
+<li><a href="#phoenix">Phoenix</a></li>
+</ul></li>
+<li><a href="#lets-go">Let&rsquo;s go</a></li>
+<li><a href="#scaffolding">Scaffolding</a></li>
+<li><a href="#simpler-times">Simpler times</a></li>
+<li><a href="#providing-a-frontend">Providing a &ldquo;frontend&rdquo;</a></li>
+<li><a href="#new-routes">New routes</a></li>
+<li><a href="#reading-the-documentation">Reading the documentation</a></li>
+<li><a href="#handle-the-file">Handle the file</a>
+
+<ul>
+<li><a href="#shortcuts">Shortcuts</a></li>
+</ul></li>
+<li><a href="#resizing-images">Resizing images</a>
+
+<ul>
+<li><a href="#genserver">GenServer</a></li>
+</ul></li>
+<li><a href="#resizing">Resizing</a></li>
+<li><a href="#problems-of-the-demo-app">Problems of the demo app</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+
+<!-- /MarkdownTOC -->
+
+<p><a name="installation"></a></p>
+
+<h2 id="installation:7debb73c6a3fd6f5aa2c2da8cbce28e8">Installation</h2>
+
+<p>Before we start, please make sure you install Elixir and Phoenix. If you do not care or have already installed both, you can skip the next section.</p>
+
+<p><a name="elixir"></a></p>
+
+<h3 id="elixir:7debb73c6a3fd6f5aa2c2da8cbce28e8">Elixir</h3>
+
+<p>Installing Elixir is actually not too difficult - it&rsquo;s <strong>not</strong> as convenient as just typing</p>
+
+<pre><code class="language-bash">sudo apt-get install elixir
+</code></pre>
+
+<p>as it equires the installation of Erlang and the <strong>O</strong>pen <strong>T</strong>elephony <strong>P</strong>rotocol (OTP). A more detailed guide on how to do the installation of Elixir (including the installation of Erlang/OTP <a href="http://elixir-lang.org/install.html">can be found on the homepage</a> - regardless of your preferred OS-choice.</p>
+
+<p><a name="phoenix"></a></p>
+
+<h3 id="phoenix:7debb73c6a3fd6f5aa2c2da8cbce28e8">Phoenix</h3>
+
+<p>Once you have installed Elixir, it&rsquo;s time to setup Phoenix. This can be done via <code>hex</code>, which in turn can be installed via <code>mix</code>:</p>
+
+<pre><code class="language-bash">mix local.hex
+</code></pre>
+
+<p>and then installing Phoenix via:</p>
+
+<pre><code class="language-bash">mix archive.install https://github.com/phoenixframework/archives/raw/master/phoenix_new.ez
+</code></pre>
+
+<p>If you need more detail, <a href="http://www.phoenixframework.org/docs/installation">consider visiting the Phoenix docs</a>.</p>
+
+<p><a name="lets-go"></a></p>
+
+<h2 id="let-s-go:7debb73c6a3fd6f5aa2c2da8cbce28e8">Let&rsquo;s go</h2>
+
+<pre><code class="language-bash">mix phoenix.new kitteh
+</code></pre>
+
+<p>should create a new Phoenix project for you in the folder <code>./kitteh</code>. When asked to install dependencies, you should probably say yes, although it&rsquo;s irrelevant since we&rsquo;re not going to build a complex frontend (but there is additional css, <a href="https://github.com/floriank/kitteh-phoenix/blob/05-resizing-cats/web/static/css/style.css">I promise</a>).</p>
+
+<p>You should end up with something like this:</p>
+
+<pre><code class="language-bash">.
+├── brunch-config.js
+├── _build
+├── config
+├── deps
+├── lib
+├── mix.exs
+├── mix.lock
+├── node_modules
+├── package.json
+├── priv
+├── README.md
+├── test
+└── web
+</code></pre>
+
+<p>If you do not wish to do anything yourself, I prepared a <a href="https://github.com/floriank/kitteh-phoenix">repository here</a>. You may use the tag <code>01-lets-go</code> <a href="https://github.com/floriank/kitteh-phoenix/tree/01-lets-go">to get the initial codebase</a>.</p>
+
+<p><a name="scaffolding"></a></p>
+
+<h2 id="scaffolding:7debb73c6a3fd6f5aa2c2da8cbce28e8">Scaffolding</h2>
+
+<p>Scaffolding is a pretty fast and reliable way in Phoenix to get off the ground. We&rsquo;re not going to use it to its full potential here.</p>
+
+<p>Consider generating a controller:</p>
+
+<pre><code class="language-bash">mix phoenix.gen.html --no-model Image images
+</code></pre>
+
+<p>This might be a bit counter-intuitive (it is to me) - but generating just a controller and its views requires the all-including <code>gen.html</code> task, which normally generates a complete resource with views associated, complete with model files included.</p>
+
+<p>Looking at our newly generated controller, we notice that it has been filled with all kind of good stuff:</p>
+
+<pre><code class="language-ruby">defmodule Kitteh.ImageController do
+  use Kitteh.Web, :controller
+
+  alias Kitteh.Image
+
+  plug :scrub_params, &quot;image&quot; when action in [:create, :update]
+
+  def index(conn, _params) do
+    images = Repo.all(Image)
+    render(conn, &quot;index.html&quot;, images: images)
+  end
+
+  def new(conn, _params) do
+    changeset = Image.changeset(%Image{})
+    render(conn, &quot;new.html&quot;, changeset: changeset)
+  end
+
+  def create(conn, %{&quot;image&quot; =&gt; image_params}) do
+    changeset = Image.changeset(%Image{}, image_params)
+
+    case Repo.insert(changes
+# [...]
+</code></pre>
+
+<p>Woah.</p>
+
+<p>Hold your horses. All I wanted was a simple controller with an action or two.</p>
+
+<p>So, let&rsquo;s rollback the changes. There is no convenient way (i.e. reverse generators) to do this yet, so</p>
+
+<pre><code class="language-bash">git clean -f &amp;&amp; rm -rf web/templates/images
+</code></pre>
+
+<p>to the rescue. Phew.</p>
+
+<p><a name="simpler-times"></a></p>
+
+<h2 id="simpler-times:7debb73c6a3fd6f5aa2c2da8cbce28e8">Simpler times</h2>
+
+<p>Let&rsquo;s fall back to the already generated <code>PageController</code>. It already has an action <code>index</code> ready to use.</p>
+
+<p>At the moment it renders a file called <code>index.html.eex</code> (<a href="https://github.com/floriank/kitteh-phoenix/blob/lets-go/web/templates/page/index.html.eex">link for the lazy</a>). It constitutes a demo partial that together with the <code>app.html.eex</code> (<a href="https://github.com/floriank/kitteh-phoenix/blob/lets-go/web/templates/layout/app.html.eex">this one here</a>) forms a complete webpage at the <code>/</code> route.</p>
+
+<p>We can look at it on the locally running instance at <a href="http://localhost:4000">localhost</a> by executing</p>
+
+<pre><code class="language-bash">iex -S mix phoenix.server
+</code></pre>
+
+<p>Neat.</p>
+
+<p><a name="providing-a-frontend"></a></p>
+
+<h2 id="providing-a-frontend:7debb73c6a3fd6f5aa2c2da8cbce28e8">Providing a &ldquo;frontend&rdquo;</h2>
+
+<p>This should be easy.</p>
+
+<p>Phoenix includes <a href="https://getbootstrap.com">Bootstrap</a> by default. I could disagree with that, but then again, using Bootstrap is not to inconvenient.</p>
+
+<p>The Phoenix team apparently decided to delegate the frontend choices to the userbase. A wise choice in the short term, as the whole frontend sector is quite fragmented at the moment (early 2016).</p>
+
+<p>That being said, replacing everything in <code>index.html.eex</code> with</p>
+
+<pre><code class="language-html">&lt;div class=&quot;row&quot;&gt;
+  &lt;div class=&quot;col-xs-12&quot;&gt;
+    &lt;div class=&quot;panel panel-default&quot;&gt;
+      &lt;div class=&quot;panel-heading&quot;&gt;
+        &lt;h1 class=&quot;panel-title&quot;&gt;Kitteh uploader&lt;/h1&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;panel-body&quot;&gt;
+        &lt;p&gt;Upload a cat picture. Doggies are welcome, too.&lt;/p&gt;
+        &lt;form action=&quot;/upload&quot; method=&quot;post&quot; enctype=&quot;multipart/form-data&quot; class=&quot;form&quot;&gt;
+          &lt;div class=&quot;form-group&quot;&gt;
+            &lt;label for=&quot;image&quot; class=&quot;control-label&quot;&gt;Image&lt;/label&gt;
+            &lt;input type=&quot;file&quot; required id=&quot;image&quot; name=&quot;image&quot; class=&quot;form-control&quot;&gt;
+          &lt;/div&gt;
+        &lt;/form&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+</code></pre>
+
+<p>should do the trick.</p>
+
+<p>No, we are not using the <a href="http://hexdocs.pm/phoenix_html/Phoenix.HTML.Form.html">form builders that Phoenix provides</a>, but feel free to read up on them.  We can just use plain HTML instead.</p>
+
+<p>If that is all too much frontend stuff for you, i suggest you look at the <code>02-simple-frontend</code> <a href="https://github.com/floriank/kitteh-phoenix/tree/02-simple-frontend">tag here</a>.</p>
+
+<p><a name="new-routes"></a></p>
+
+<h2 id="new-routes:7debb73c6a3fd6f5aa2c2da8cbce28e8">New routes</h2>
+
+<p>We defined an <code>/upload</code> path that the form uses, but this route is nowhere to be found. Let&rsquo;s add it:</p>
+
+<pre><code class="language-ruby"># see web/router.ex
+# [...]
+  scope &quot;/&quot;, Kitteh do
+    pipe_through :browser # Use the default browser stack
+
+    get &quot;/&quot;, PageController, :index
+
+    # the new route
+    post &quot;/upload&quot;, PageController, :upload
+  end
+# [...]
+</code></pre>
+
+<p><strong>Note</strong> I also sneakily added a <code>required</code> attribute to the file-<code>input</code>, to avoid <a href="http://i.imgur.com/GluNcro.jpg">any validation concerns</a>.</p>
+
+<p>If we try to send the form n&hellip; we notice that we&rsquo;re missing a way to submit the form and add a button first.</p>
+
+<p>If we try to send the form now, it will crash, since no action will take care of the request.</p>
+
+<p>But wait, how do I upload stuff anyway? <a href="http://www.phoenixframework.org/docs/file-uploads">Should the framework not provide me with some way to make this easier?</a>.</p>
+
+<p>Kids, <strong>read your documentation</strong> before heading into battle.</p>
+
+<p><a name="reading-the-documentation"></a></p>
+
+<h2 id="reading-the-documentation:7debb73c6a3fd6f5aa2c2da8cbce28e8">Reading the documentation</h2>
+
+<p>Turns out, the Phoenix people do provide something to do file uploads.</p>
+
+<p>That means we can actually use the form builders after all since we&rsquo;re going the changeset route.</p>
+
+<p>I feel silly.</p>
+
+<p>Create a new model:</p>
+
+<pre><code class="language-bash"># note that this is just my initial try, have a look at the migrations for the actual fields used
+mix phoenix.gen.model Image original_name:string url:string size:integer 
+</code></pre>
+
+<p>and migrate the database:</p>
+
+<pre><code class="language-bash">mix ecto.create &amp;&amp; mix ecto.migrate
+</code></pre>
+
+<p>If this fails for you, make sure you have a valid configuration for you database. To configure your database, see your local <code>config/dev.exs</code> (see <a href="https://github.com/floriank/kitteh-phoenix/blob/02-simple-frontend/config/dev.exs">here</a>).</p>
+
+<p>So, finally, we can create a changeset in the controller and use it in the template:</p>
+
+<pre><code class="language-erb">&lt;!-- index.html.eex, replacing the &lt;form&gt; --&gt;
+&lt;%= form_for @changeset, &quot;/upload&quot;, [multipart: true], fn f -&gt;  %&gt;
+  &lt;div class=&quot;form-group&quot;&gt;
+    &lt;label for=&quot;image_file&quot; class=&quot;control-label&quot;&gt;Image&lt;/label&gt;
+    &lt;%= file_input f, :file, required: true %&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;form-group&quot;&gt;
+    &lt;%= submit &quot;Upload&quot;, class: &quot;btn btn-primary&quot; %&gt;
+  &lt;/div&gt;
+&lt;% end %&gt;
+</code></pre>
+
+<p>The <code>@changeset</code> is introduced and passed to the view in the controller:</p>
+
+<pre><code class="language-ruby"># web/controllers/page_controller.ex
+# [...]
+  alias Kitteh.Repo
+  alias Kitteh.Image
+
+  def index(conn, _params) do
+    changeset = Image.changeset(%Image{})
+    render conn, &quot;index.html&quot;, changeset: changeset
+  end
+# [...]
+</code></pre>
+
+<p>If all goes well, this should render our frontend again. I also snuck in the missing Button for submitting the form. Please note that in order to actually use the line</p>
+
+<pre><code class="language-erb">&lt;%= file_input f, :file, required: true %&gt;
+</code></pre>
+
+<p>a <a href="https://github.com/floriank/kitteh-phoenix/blob/03-actually-read-the-docs/web/models/image.ex#L8">virtual</a> <code>file</code> attribute has to exist in the <code>Image</code> model.</p>
+
+<p>If this was all just ramblings of a mad developer for you, you can also check out the tag <code>03-actually-read-the-docs</code> <a href="https://github.com/floriank/kitteh-phoenix/tree/03-actually-read-the-docs">here</a>.</p>
+
+<p><a name="handle-the-file"></a></p>
+
+<h2 id="handle-the-file:7debb73c6a3fd6f5aa2c2da8cbce28e8">Handle the file</h2>
+
+<p>It&rsquo;s time for some action in the controller, because at the moment our application will crash if we try to submit the form with an image.</p>
+
+<p>The controller action has to do the following:</p>
+
+<ol>
+<li><s>Validate the file given</s></li>
+<li>Move the uploaded file under a new name into a folder we can access</li>
+<li>Save the model with some information on the file uploaded to the DB.</li>
+<li>if that was successful, redirect to the <code>show</code> action for the new image</li>
+<li>(alt) if not, redirect to the <code>index</code> with a message</li>
+</ol>
+
+<p>I will skip the validation on the file - one could do this by validating the <code>size</code> field of the changeset before inserting.</p>
+
+<p>We&rsquo;ll skip this here and assume that the file given is something we want.</p>
+
+<p>Phoenix will give us the file as a <code>Plug.Upload</code> struct in our <code>params</code> to the newly created <code>upload</code> function in <code>PageController</code>:</p>
+
+<pre><code class="language-ruby"># web/controllers/page_controller.ex
+# [...]
+
+  def upload(conn, params) do
+    # now what?
+  end
+
+# [...]
+</code></pre>
+
+<p>Thinking like a Rails developer, the fat model approach comes to mind. Let&rsquo;s put all the logic for this into a model and let the controller action pass in the params. Be done with it, move on. Have a beer maybe.</p>
+
+<p>This is not viable here, since Elixir ultimately does not care where your functions live. <em>There are no models, just functions and structs</em>.</p>
+
+<p>I decided in favour of a more controller based approach. The controller will do the the copying and transform the file input into a usable <code>params</code> map:</p>
+
+<pre><code class="language-ruby"># web/controllers/page_controller.ex
+# [...]
+  def upload(conn, %{ &quot;image&quot; =&gt; %{ &quot;file&quot; =&gt; file } }) do
+    # transform the uploaded file into a changeset
+    params = file
+      |&gt; copy_file(unique_name)
+    changeset = Image.changeset(%Image{}, params)
+
+    # try to insert the newly generated changeset
+  end
+# [...]
+</code></pre>
+
+<p>The copy file function acutally does the more &ldquo;heavy lifting&rdquo;:</p>
+
+<pre><code class="language-ruby">defp copy_file(file) do
+  extension = Path.extname(file.filename)
+  target = target_path &lt;&gt; name &lt;&gt; extension
+  case File.copy(file.path, target) do
+    {:ok, size} -&gt;
+      %{
+        generated_name: name,
+        token: String.downcase(name),
+        path: target,
+        original_name: file.filename,
+        content_type: file.content_type,
+        size: size
+      }
+    {:error, _} -&gt;
+      %{}
+  end
+end
+</code></pre>
+
+<p>Depending on whether the copying was successful, we either get a proper <code>params</code> map with all the necessary information filled in or we are left with an empty map that will never pass our validations.</p>
+
+<p>Note that <code>target_path</code> actually behaves differently from what you would expect. In Phoenix, you do not find the same behaviour as with Rails&rsquo; <code>Rails.root</code>.</p>
+
+<p>For now, we need a target path that lives within our application and we can access. But our codebase will be compiled (in contrast to a Ruby codebase), so we cannot be sure where our bytecode ends up (<em>Hint</em>: It&rsquo;s in the <code>./_build</code> folder).</p>
+
+<p>We can do this though:</p>
+
+<pre><code class="language-ruby">Application.app_dir(:kitteh, &quot;priv&quot;)
+</code></pre>
+
+<p>See <a href="http://stackoverflow.com/questions/33931176/finding-a-file-in-a-phoenix-app-script-rails-root#">this StackOverflow answer</a> for more information. The actual implementation used is found <a href="https://github.com/floriank/kitteh-phoenix/blob/04-enable-uploading/web/controllers/page_controller.ex#L81">here</a>.</p>
+
+<p>After having generated a <code>params</code> map, the rest is just the same as in any Phoenix tutorial you might find:</p>
+
+<ul>
+<li>generate a changeset based on <code>Image</code></li>
+<li>insert that changeset</li>
+<li>redirect to the show action or abort and rerender the index template</li>
+</ul>
+
+<p>In case you were wondering:</p>
+
+<p>The shorthand generated for the kitty is generated via <code>Image.generate_unique_name</code>, which <a href="https://github.com/floriank/kitteh-phoenix/blob/04-enable-uploading/web/models/image.ex#L41">uses collected seed data</a> to generate a different combination of these attributes. We have to try again if we actually used the name before in the database. Since Elixir does not have any loops, we <a href="https://github.com/floriank/kitteh-phoenix/blob/04-enable-uploading/web/controllers/page_controller.ex#L56">resort to recursion</a> until we find a name that we can use.</p>
+
+<p><strong>Note</strong>: This has no safety measures - if all combinations of the attributes are used up, our database is &ldquo;full&rdquo; and we are screwed.</p>
+
+<p>After the image is persisted we redirect to <code>show</code>. Additionally, an <code>ImageController</code> is introduced with a <code>show</code> action <a href="https://github.com/floriank/kitteh-phoenix/blob/04-enable-uploading/web/controllers/image_controller.ex#L6">here</a> to actually serve up the image for now. This is intermediary - ultimately, we&rsquo;ll not use Phoenix to serve assets in &ldquo;production&rdquo;.</p>
+
+<p>If all goes well, the upload should work and the original image should be served under a memorable shorthand.</p>
+
+<p><a name="shortcuts"></a></p>
+
+<h3 id="shortcuts:7debb73c6a3fd6f5aa2c2da8cbce28e8">Shortcuts</h3>
+
+<p>If this is all to much coding and you would like the easy way out, check out the tag <code>04-enable-uploading</code> <a href="https://github.com/floriank/kitteh-phoenix/tree/04-enable-uploading">here</a>.</p>
+
+<p><a name="resizing-images"></a></p>
+
+<h2 id="resizing-images:7debb73c6a3fd6f5aa2c2da8cbce28e8">Resizing images</h2>
+
+<p>Remember the image modifiers? Like &ldquo;Tiny&rdquo;, &ldquo;Large&rdquo; and &ldquo;Monstrous&rdquo;? We forgot about those.</p>
+
+<p>It would be nice if we had all the images for the different sized images pre-generated. We could use the same mechanisms we already have implemented to serve them.</p>
+
+<p><a name="genserver"></a></p>
+
+<h3 id="genserver:7debb73c6a3fd6f5aa2c2da8cbce28e8">GenServer</h3>
+
+<p>In a (newer) Rails environment, we could utilize anything that fulfills the interface of [<code>ActiveJob</code>](<a href="http://edgeguides.rubyonrails.org/active_job_basics.html">http://edgeguides.rubyonrails.org/active_job_basics.html</a>, like an adapter to <a href="http://sidekiq.org/">Sidekiq</a> or the <code>delayed_job</code> <a href="https://github.com/collectiveidea/delayed_job">gem</a> gem. We basically spin up a second OS process to generate the image, regardless of the solution.</p>
+
+<p>Not an option here though. There are some solutions to queues and background jobs, but we are on the Erlang VM anyway, so we can utilize the technology available to us. After all, BEAM processes are cheap and lightweight.</p>
+
+<p><a href="http://elixir-lang.org/getting-started/mix-otp/genserver.html">GenServer</a> might be the answer here. But actually having a long running process in the background that we can use as a service might be overkill here.</p>
+
+<p>Let&rsquo;s use <code>Task</code> instead. <code>Task</code> is a wrapper around Elixirs <code>spawn</code> function and can be used for a <a href="http://elixir-lang.org/docs/v1.1/elixir/Task.html">multitude of things</a> that are actually more advanced than we do right here, right now.</p>
+
+<p>Looking into <a href="https://github.com/floriank/kitteh-phoenix/commit/3652cbc3287e7fd832e7ad37a0acd5550ea0b36d#diff-3f35d230596bca22de76cff4dd188e4cR82">the code</a>:</p>
+
+<pre><code class="language-ruby">defp create_sizes(image) do
+  sizes = %{ &quot;Tiny&quot; =&gt; &quot;90&quot;, &quot;Large&quot; =&gt; &quot;300&quot;, &quot;Monstrous&quot; =&gt; &quot;600&quot; }
+  original_file = image.path
+  Enum.each sizes, fn({ label, size }) -&gt;
+    Task.start fn -&gt;
+      name = label &lt;&gt; image.generated_name
+      file_params = resize(image)
+        |&gt; copy_file name
+      changeset = Image.changeset(%Image{}, file_params)
+        |&gt; Repo.insert
+    end
+  end
+end
+</code></pre>
+
+<p>Using <code>Task.start</code> creates a subprocess that is <em>not linked</em> to the current process. Process linking here is not strictly necessary, as this is implemented as a fire-and-forget strategy. In contrast to <code>Task.start_link</code>, we&rsquo;re not linking our main process (<code>kitteh</code>) to the new process. In case it crashes, we do not want to tear down our application (process) as well.</p>
+
+<p><strong>Note</strong>: I had some problems finding out on how to match function call in using <code>Enum.each</code> against the result of the map. The resulting argument is matched against a tuple. Might be trivial, but just in case you were wondering.</p>
+
+<p>This has the <em>notable</em> disadvantage every fire-and-forget strategy has - we do not know if we actually create the images. Good enough for this application, but for something production-ready, one should look for some bidirectional communication. Just in case, you know, you maybe want to connect these images to one another.</p>
+
+<p><a name="resizing"></a></p>
+
+<h2 id="resizing:7debb73c6a3fd6f5aa2c2da8cbce28e8">Resizing</h2>
+
+<p>Resizing images is something one should probably be too lazy to implement oneself. Enter <code>mogrify</code> - it is <a href="https://github.com/route/mogrify">a wrapper library</a> for ImageMagick, providing us with functions for handling image-resizing.</p>
+
+<p>We should make a mental note here as we introduce a hard dependency for our docker containers later on. Any container that we want to create for this application now has to provide this dependency.</p>
+
+<p>With <a href="https://github.com/floriank/kitteh-phoenix/commit/b7724faae9725e127f33734bcfaf2eb0ed79a101">another commit</a>, the resize function is introduced:</p>
+
+<pre><code class="language-ruby">defp resize(image, name, size) do
+  new_path = target_path &lt;&gt; name &lt;&gt; Path.extname(image.path)
+  new_image = open(image.path) |&gt; copy |&gt; resize(size) |&gt; save(new_path)
+  %{
+    generated_name: name,
+    token: String.downcase(name),
+    path: new_path,
+    original_name: image.original_name,
+    content_type: image.content_type,
+    size: image.size
+  }
+end
+</code></pre>
+
+<p>This should create all the resized versions. We can also utilize the builtin <code>Mogrify.copy</code> function to skip manual copying as we did for the initial image. We end up with returning so params we can use to create another changeset and insert everything. neat, the rest of the system should now work for the resized images as well.</p>
+
+<p><strong>Note</strong>: Somewhere around this point I noticed <a href="https://github.com/floriank/kitteh-phoenix/commit/b7724faae9725e127f33734bcfaf2eb0ed79a101#diff-8c237d3166e777cbb3d401efc40b1c62R19">a screw up in the router</a> as matching order was off. This lead to a redirect to <code>/</code> after the initial image had been created.</p>
+
+<p>At this point, our image uploader should be feature complete. Altough being the duct-tape ghetto version it now is, it should provide a good bassis to play around with in the next part.</p>
+
+<p>If this is all the same to you and you could not care less about how the images are generated and stored exactly, check out the tag <code>05-resizing-cats</code> <a href="https://github.com/floriank/kitteh-phoenix/tree/05-resizing-cats">here</a>.</p>
+
+<p><a name="problems-of-the-demo-app"></a></p>
+
+<h2 id="problems-of-the-demo-app:7debb73c6a3fd6f5aa2c2da8cbce28e8">Problems of the demo app</h2>
+
+<p>This demo application has quite a few problems, some of them already discussed, some of them a little less obvious:</p>
+
+<ul>
+<li><strong>no tests</strong> - this is a biggie and nothing to sweep under the rug. Since this is not intended for production purposes, we sweep it under the rug</li>
+<li>the amount of images uploaded is limited to the combination limit of the seed data</li>
+<li>Naming is somewhat bad</li>
+<li>no validations on <code>Image</code> changesets besides the required fields</li>
+<li><code>[...]</code></li>
+</ul>
+
+<p>The list is not complete, but one can always find things to improve. For example, by just supporting another <code>type</code>, e.g. &ldquo;Doggy&rdquo; in addition to &ldquo;Kitty&rdquo;, we could double the image capacity. We could also make sure that all images have been created using <code>Task.await</code>.</p>
+
+<p>Nevertheless, it should make a good demo app as it has almost everything - a web app, some need for a database, static data that has to be stored and served from somewhere. All the good stuff.</p>
+
+<p>there is one major problem when it comes to Live reload. I personally am not a fan of such a feature, but it is included in Phoenix by default. I had to <a href="https://github.com/floriank/kitteh-phoenix/commit/9224dcf92a42a26685ac7fc3e9f019095c0d99e0">disable it in dev</a>, since it interfered with the upload feature. the uploaded into a folder that is live reloaded apparently wasn&rsquo;t the best of my ideas.</p>
+
+<p><a name="conclusion"></a></p>
+
+<h2 id="conclusion:7debb73c6a3fd6f5aa2c2da8cbce28e8">Conclusion</h2>
+
+<p><a href="https://floriank.github.io/post/using-phoenix-with-docker-part-3-containerization/">In the next part</a>, we&rsquo;ll finally look into using <code>docker</code> to gain containers for our project and use <code>docker compose</code> to orchestrate our system.</p>
+
+<p>If you already forgot what this was all about, <a href="https://floriank.github.io/post/using-phoenix-with-docker-part-1-introduction/">check out part 1 to get a re-introduction</a>.</p>
+
+            </div>
+        </div>
+	</div>
+    <div class="pure-u-1-24 pure-u-md-1-6"></div>
+</div>
+
+<div class="footer pure-g">
+    <div class="pure-u-1-24 pure-u-md-5-24"></div>
+    <div class="pure-u-11-12 pure-u-md-5-8">
+        <div class="pure-menu pure-menu-horizontal footer-content">
+            <ul>
+                <li class="pure-menu-heading" id="foot-name">Florian Kraft:</li>
+
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://github.com/floriank" class="pure-menu-link">GitHub</a>
+                </li>
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://www.linkedin.com/in/floriankraft" class="pure-menu-link">LinkedIn</a>
+                </li>
+                
+
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://twitter.com/carhillion" class="pure-menu-link">Twitter</a>
+                </li>
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://stackoverflow.com/users/498226/florian" class="pure-menu-link">Stack Overflow</a>
+                </li>
+                
+                <li class="pure-menu-item right">
+                  <a class="pure-menu-link" href="https://github.com/gizak/nofancy/">Theme based on the most excellent nofancy theme</a>
+                </li>
+            </ul>
+            <a href="#" class="pure-menu-heading pull-right" id="gototop-btn">↑↑</a>
+        </div>
+	  </div>
+      <div class="pure-u-1-24 pure-u-md-1-6"></div>
+</div>
+
+
+<script src="https://floriank.github.io/js/jquery.min.js" type="text/javascript"></script>
+<script src="https://floriank.github.io/js/jquery.timeago.js" type="text/javascript"></script>
+<script type="text/javascript">
+  $(function(){
+    $("time.timeago").timeago();
+  })
+  $("#toggle-btn").click(function(){
+    $("#toggle-content").toggle();
+    if($(this).html() === "☰") {
+        $(this).html("X")
+    } else {
+        $(this).html("☰")
+    }
+  });
+  $(window).resize(function(){
+    if(window.innerWidth > 768) {
+      $(".desktop").removeAttr("style");
+    }
+  });
+</script>
+
+</body>
+</html>
+

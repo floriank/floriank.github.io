@@ -6,8 +6,1200 @@
     <description>Recent content in Development on Notes of an awful developer</description>
     <generator>Hugo -- gohugo.io</generator>
     <copyright>(c) 2016 Florian Kraft</copyright>
-    <lastBuildDate>Thu, 04 Feb 2016 10:33:17 +0100</lastBuildDate>
+    <lastBuildDate>Mon, 15 Feb 2016 15:47:39 +0100</lastBuildDate>
     <atom:link href="https://floriank.github.io/categories/development/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Using Phoenix with docker, Part 3: Containerization</title>
+      <link>https://floriank.github.io/post/using-phoenix-with-docker-part-3-containerization/</link>
+      <pubDate>Mon, 15 Feb 2016 15:47:39 +0100</pubDate>
+      
+      <guid>https://floriank.github.io/post/using-phoenix-with-docker-part-3-containerization/</guid>
+      <description>
+
+&lt;p&gt;&lt;em&gt;This is the final part of a three part series&lt;/em&gt;: &lt;a href=&#34;https://floriank.github.io/post/using-phoenix-with-docker-part-1-introduction/&#34;&gt;Part 1&lt;/a&gt; - &lt;a href=&#34;https://floriank.github.io/post/using-phoenix-with-docker-part-2-implementation/&#34;&gt;Part 2&lt;/a&gt; - &lt;strong&gt;Part 3&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Note&lt;/strong&gt;: I am using the latest &lt;code&gt;docker-compose&lt;/code&gt; and the latest &lt;code&gt;docker-engine&lt;/code&gt; later on in this post.&lt;/p&gt;
+
+&lt;h1 id=&#34;contents:8058a1d8ca608171d45c42d3c59fef01&#34;&gt;Contents&lt;/h1&gt;
+
+&lt;!-- MarkdownTOC --&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;#composition&#34;&gt;Composition&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#kitteh-dockerfile&#34;&gt;Kitteh Dockerfile&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#database-connections&#34;&gt;Database connections&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#tearing-it-all-down&#34;&gt;Tearing it all down&lt;/a&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;#container-structure&#34;&gt;Container structure&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#creating-the-volume-container&#34;&gt;Creating the volume container&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#docker-110&#34;&gt;Docker 1.10&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#configuring-nginx&#34;&gt;Configuring nginx&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#running-the-containers&#34;&gt;Running the containers&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#assets-and-images&#34;&gt;Assets and images&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#looking-back&#34;&gt;Looking back&lt;/a&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;#cleaning-up&#34;&gt;Cleaning up&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#conclusion&#34;&gt;Conclusion&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;!-- /MarkdownTOC --&gt;
+
+&lt;p&gt;So far, so good. We now have a working application that we want to containerize. At the moment, &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/tree/05-resizing-cats&#34;&gt;the application is feature complete&lt;/a&gt;, but nothing interesting related to &lt;code&gt;docker&lt;/code&gt; happened yet.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;composition&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;composition:8058a1d8ca608171d45c42d3c59fef01&#34;&gt;Composition&lt;/h2&gt;
+
+&lt;p&gt;Before actually starting with the Dockerfile of our own codebase, let&amp;rsquo;s introduce a &lt;a href=&#34;https://docs.docker.com/compose/overview/&#34;&gt;docker compose&lt;/a&gt; configuration, which is a YAML file called &lt;code&gt;docker-compose.yml&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-yaml&#34;&gt;# the database image
+db:
+  image: &amp;quot;postgres:9.4&amp;quot;
+  ports:
+    - &amp;quot;5432:5432&amp;quot;
+  environment:
+    POSTGRES_USER: kitteh
+    POSTGRES_PASSWORD: kitteh
+  volumes_from:
+    - dbdata
+
+# for persistance of database data
+dbdata:
+  image: &amp;quot;postgres:9.4&amp;quot;
+  volumes:
+    - /var/lib/postgres
+  command: &amp;quot;true&amp;quot;
+
+# the main image, this is the application
+web:
+  build: &amp;quot;.&amp;quot;
+  environment:
+    MIX_ENV: &amp;quot;prod&amp;quot;
+  ports:
+    - &amp;quot;4000:4000&amp;quot;
+  links:
+    - &amp;quot;db:db&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This is the naive route to take, we provide a container for the database, using the official postgres image, then use the same image for a db layer to achieve actual persistance by mounting the volumes from it into the first database image.&lt;/p&gt;
+
+&lt;p&gt;The application image by itself will not be buildable at the moment since it has no &lt;code&gt;Dockerfile&lt;/code&gt; yet, so running&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;docker-compose up
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;should pull the database related image, but then crash as the build commend fails. Or it fails as the port cannot be bound to, since you may have a local PostgreSQL instance running:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;Starting kitteh_dbdata_1...
+Recreating kitteh_db_1...
+Building web...
+Cannot locate specified Dockerfile: Dockerfile
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;No matter what, we should think about our applications &lt;code&gt;Dockerfile&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;kitteh-dockerfile&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;kitteh-dockerfile:8058a1d8ca608171d45c42d3c59fef01&#34;&gt;Kitteh Dockerfile&lt;/h2&gt;
+
+&lt;p&gt;Remmembering the &lt;a href=&#34;#todo&#34;&gt;section about resizing in part 2&lt;/a&gt; earlier, we know that we have at least the dependency of ImageMagick besides the actual Erlang VM and OTP to provide.&lt;/p&gt;
+
+&lt;p&gt;What do we have to ensure that our whole system works? Here is a checklist:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;all dependencies must be available as/in containers somehow&lt;/li&gt;
+&lt;li&gt;database must be migratable and migrated to a point where it is usable&lt;/li&gt;
+&lt;li&gt;ideally, assets are built and served via a separate process&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Looking at the checklist, here are the dependencies we have:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Erlang and OTP&lt;/li&gt;
+&lt;li&gt;Elixir, &lt;code&gt;hex&lt;/code&gt; and &lt;code&gt;mix&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;ImageMagick&lt;/li&gt;
+&lt;li&gt;PostgreSQL&lt;/li&gt;
+&lt;li&gt;nginx&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;For the moment, docker image sizes should not be our concern. My personal preference would be to have the most minimal footprint possible when it comes to the images, but we should focus on getting things working now:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;FROM ubuntu:14.04.3
+# [...]
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Should be simple enough. Yes, we are using the &lt;a href=&#34;https://hub.docker.com/_/ubuntu/&#34;&gt;Ubuntu image&lt;/a&gt;. I know it&amp;rsquo;s huge (~200MB) and it will become even larger with dependencies - but that should not stop us from using it locally.&lt;/p&gt;
+
+&lt;p&gt;Installing the Elixir, OTP and ImageMagick dependencies should be easy, thanks to &lt;code&gt;apt-get&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;FROM ubuntu:14.04.3
+
+# Set the locale, otherwise elixir will complain later on
+RUN locale-gen en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
+
+# wget for convenience, use curl if you want to
+RUN apt-get -y -q install wget
+
+# add erlang otp
+RUN wget https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb
+RUN dpkg -i erlang-solutions_1.0_all.deb
+RUN apt-get update
+RUN apt-get install -y -q imagemagick esl-erlang elixir
+ADD . /app
+WORKDIR /app
+RUN mix local.hex --force
+RUN mix deps.get --only-prod
+RUN mix compile
+CMD [&amp;quot;mix&amp;quot;, &amp;quot;phoenix.server&amp;quot;]
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Okay, not &lt;em&gt;straight&lt;/em&gt; forward, but at least simple - it&amp;rsquo;s quite a lot of stuff to pack into the image. In the end it will be around ~500MB in size. It&amp;rsquo;s not too bad, considering a lot of layers can be reused later on, but it&amp;rsquo;s quite much, especially if you want to upload it to a hub.&lt;/p&gt;
+
+&lt;p&gt;Well, running it in combination with &lt;code&gt;docker-compose&lt;/code&gt; should now yield results:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;docker-compose up
+Starting d239c7b138_kitteh_dbdata_1...
+kitteh_db_1 is up-to-date
+Recreating kitteh_web_1...
+Attaching to d239c7b138_kitteh_dbdata_1, kitteh_db_1, kitteh_web_1
+db_1     | LOG:  database system was shut down at 2016-02-13 18:34:32 UTC
+db_1     | LOG:  MultiXact member wraparound protections are now enabled
+db_1     | LOG:  database system is ready to accept connections
+db_1     | LOG:  autovacuum launcher started
+db_1     | LOG:  received smart shutdown request
+db_1     | LOG:  autovacuum launcher shutting down
+db_1     | LOG:  shutting down
+db_1     | LOG:  database system is shut down
+db_1     | LOG:  database system was shut down at 2016-02-13 18:43:57 UTC
+db_1     | LOG:  MultiXact member wraparound protections are now enabled
+db_1     | LOG:  autovacuum launcher started
+db_1     | LOG:  database system is ready to accept connections
+db_1     | LOG:  received smart shutdown request
+db_1     | LOG:  autovacuum launcher shutting down
+db_1     | LOG:  shutting down
+db_1     | LOG:  database system is shut down
+db_1     | LOG:  database system was shut down at 2016-02-13 18:50:18 UTC
+db_1     | LOG:  MultiXact member wraparound protections are now enabled
+db_1     | LOG:  autovacuum launcher started
+db_1     | LOG:  database system is ready to accept connections
+web_1    | [info] Running Kitteh.Endpoint with Cowboy on http://localhost:4000
+web_1    | [error] Could not start watcher because &amp;quot;node&amp;quot; is not available. Your Phoenix application is still running, however assets...
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;We forgot assets. We&amp;rsquo;ll deal with it down the road. For now, visisting your &lt;a href=&#34;http://localhost:4000&#34;&gt;localhost&lt;/a&gt; should yield the original web application we created earlier - at least it&amp;rsquo;s first page.&lt;/p&gt;
+
+&lt;p&gt;Uploading shouldn&amp;rsquo;t work - there is no migrated database yet and you should get a connection error when trying to upload a picture.&lt;/p&gt;
+
+&lt;p&gt;If you are to lazy to create your own &lt;code&gt;Dockerfile&lt;/code&gt;, please see the tag &lt;code&gt;06-dockerizing-kitties&lt;/code&gt; &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/tree/06-dockerizing-kitties&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;database-connections&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;database-connections:8058a1d8ca608171d45c42d3c59fef01&#34;&gt;Database connections&lt;/h2&gt;
+
+&lt;p&gt;We should see if we can make the database work.&lt;/p&gt;
+
+&lt;p&gt;The database images used at the moment utilize &lt;a href=&#34;https://hub.docker.com/_/postgres/&#34;&gt;the official postgres image&lt;/a&gt;. The &lt;code&gt;docker-compose.yml&lt;/code&gt; file will set environment variables that should correspond to the values in your local &lt;code&gt;prod.secret.exs&lt;/code&gt; file.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Tip&lt;/strong&gt;: Read environment variables into that configuration like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-ruby&#34;&gt;# ./config/prod.secret.exs
+# [...]
+# Configure your database
+config :kitteh, Kitteh.Repo,
+  adapter: Ecto.Adapters.Postgres,
+  hostname: &amp;quot;db&amp;quot;, # see the links section in docker-compose.yml for the name
+  username: System.get_env(&amp;quot;DB_USER&amp;quot;)
+  password: System.get_env(&amp;quot;DB_PASSWORD&amp;quot;),
+  database: &amp;quot;kitteh_prod&amp;quot;,
+  pool_size: 20
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;For our use case this can stay hard coded as this file is &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/blob/06-dockerizing-kitties/.gitignore#L28&#34;&gt;not checked into git anyway&lt;/a&gt;. It might be different if one would choose to utilize a CI.&lt;/p&gt;
+
+&lt;p&gt;However, making sure that the database is reachable is key, since we need to migrate it (the database image actually already contains a database named after the environment &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/blob/06-dockerizing-kitties/docker-compose.yml#L7&#34;&gt;variable set here&lt;/a&gt; - come to think of it, it should probably &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/commit/07146c2b2c0a141d98ca821856802dacf7a7b075&#34;&gt;be the same as in the configuration&lt;/a&gt;)&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Note&lt;/strong&gt;: I encountered some problems when trying to use the &lt;code&gt;$POSTGRES_DB&lt;/code&gt; variable. for some reason it always fell back to the &lt;code&gt;$POSTGRES_USER&lt;/code&gt;. I have not yet figured out why. These problems &lt;em&gt;only&lt;/em&gt; occured while using the version 1 of the compose configuration.&lt;/p&gt;
+
+&lt;p&gt;Long story short, if we run&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;# use -d for detached mode
+docker-compose up
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;we can attach to the running docker container using &lt;code&gt;exec&lt;/code&gt; like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;# container name may vary
+docker exec -it kitteh_web_1 /bin/bash
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;or&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;docker-compose run web /bin/bash
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;and then run&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;# add MIX_ENV=prod if you did not change the docker-compos.yml entry
+mix ecto.migrate
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;inside the container to finally migrate the database. If this fails, try to make sure that &lt;code&gt;$MIX_ENV&lt;/code&gt; is set to &lt;code&gt;prod&lt;/code&gt; in the environment.&lt;/p&gt;
+
+&lt;p&gt;If we now try to upload a picture again, it &lt;em&gt;should&lt;/em&gt; work. You can of course always run migrations using&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;docker-compose run web mix ecto.migrate
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;directly.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;tearing-it-all-down&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;tearing-it-all-down:8058a1d8ca608171d45c42d3c59fef01&#34;&gt;Tearing it all down&lt;/h2&gt;
+
+&lt;p&gt;If we restart our composition, we should take note that our database data should have been persisted. But if we reload the image url we just generated, the image will be gone, as the actual images are not persisted in the container.&lt;/p&gt;
+
+&lt;p&gt;Since we ignored assets completely so far, it&amp;rsquo;s now time to give this a more serious thought.&lt;/p&gt;
+
+&lt;p&gt;First, we add an &lt;code&gt;nginx&lt;/code&gt; entry to our &lt;code&gt;docker-compose.yml&lt;/code&gt; (I chose the &lt;a href=&#34;https://hub.docker.com/_/nginx/&#34;&gt;official image&lt;/a&gt;):&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-yaml&#34;&gt;# [...]
+nginx:
+  image: &amp;quot;nginx:1.9.11&amp;quot;
+  # [...]
+  # now what?
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;&lt;a name=&#34;container-structure&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3 id=&#34;container-structure:8058a1d8ca608171d45c42d3c59fef01&#34;&gt;Container structure&lt;/h3&gt;
+
+&lt;p&gt;Let&amp;rsquo;s talk about the basic idea first:&lt;/p&gt;
+
+&lt;p&gt;We&amp;rsquo;ll use a data volume container that can be used by both the not-yet-existing &lt;code&gt;nginx&lt;/code&gt; container, as well as the existing &lt;code&gt;web&lt;/code&gt; container. The &lt;code&gt;web&lt;/code&gt;container will write to the data volume container, the &lt;code&gt;nginx&lt;/code&gt; container will read the data and serve it appropiately. With this, we can individually backup the data container if we wanted to and the data is persisted.&lt;/p&gt;
+
+&lt;p&gt;Here is the checklist:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;Create a data container with volumes for both &lt;code&gt;web&lt;/code&gt; and &lt;code&gt;nginx&lt;/code&gt; containers.&lt;/li&gt;
+&lt;li&gt;Mount volumes into both containers&lt;/li&gt;
+&lt;li&gt;Create an &lt;code&gt;nginx&lt;/code&gt; container that has a site config for serving the contents of the volume mounted&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;&lt;a name=&#34;creating-the-volume-container&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3 id=&#34;creating-the-volume-container:8058a1d8ca608171d45c42d3c59fef01&#34;&gt;Creating the volume container&lt;/h3&gt;
+
+&lt;p&gt;Before we add our container, we should reevaluate where exactly we want to store our images.&lt;/p&gt;
+
+&lt;p&gt;Inside the container, the current &lt;code&gt;uploads&lt;/code&gt; folder resides within &lt;code&gt;_build/prod/lib/kitteh/priv/static/uploads&lt;/code&gt;. That&amp;rsquo;s quite a handful to type.&lt;/p&gt;
+
+&lt;p&gt;So let&amp;rsquo;s change that first. Luckily, we only have to change the &lt;code&gt;target_path&lt;/code&gt; function in the &lt;code&gt;page_controller.ex&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-ruby&#34;&gt;# ./web/controllers/page_controller.ex
+# [...]
+  defp target_path do
+    if Mix.env == :prod do
+      &amp;quot;/var/uploads/&amp;quot;
+    else
+      Application.app_dir(:kitteh, &amp;quot;priv&amp;quot;) &amp;lt;&amp;gt; &amp;quot;/static/uploads/&amp;quot;
+    end
+  end
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;We&amp;rsquo;ll create another container in our &lt;code&gt;docker-compose.yml&lt;/code&gt; that is built from scratch:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-yaml&#34;&gt;# [...]
+assets:
+  image: &amp;quot;busybox&amp;quot;
+  volumes:
+    - /var/uploads
+  command: &amp;quot;true&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;If everything went well, the images should be preserved between container restarts.&lt;/p&gt;
+
+&lt;p&gt;We can now create an nginx docker image. We&amp;rsquo;re going to use a custom Dockerfile to do so - we can store it alongside the codebase.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;docker-110&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3 id=&#34;docker-1-10:8058a1d8ca608171d45c42d3c59fef01&#34;&gt;Docker 1.10&lt;/h3&gt;
+
+&lt;p&gt;This is where things get interesting - Docker &lt;a href=&#34;https://blog.docker.com/2016/02/docker-1-10/&#34;&gt;was recently updated to v1.10.0&lt;/a&gt; - and along with it came an update to &lt;code&gt;docker-compose&lt;/code&gt; with a new version of the syntax, allowing for custom dockerfile directives in the &lt;code&gt;build&lt;/code&gt; object of the configuration.&lt;/p&gt;
+
+&lt;p&gt;I decided to give it a spin. At this point you&amp;rsquo;ll have to upgrade as well, otherwise you cannot use the version 2 of the configuration syntax.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Note&lt;/strong&gt;: If you do not want to upgrade, you can always build yourself a local image using the &lt;code&gt;Dockerfile.nginx&lt;/code&gt; and update the version 1 &lt;code&gt;docker-compose.yml&lt;/code&gt; accordingly.&lt;/p&gt;
+
+&lt;p&gt;The updated configuration can be found &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/commit/f8188c8130a61f2131dc843982d23e1f30e1eb6f&#34;&gt;in this commit&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;configuring-nginx&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3 id=&#34;configuring-nginx:8058a1d8ca608171d45c42d3c59fef01&#34;&gt;Configuring nginx&lt;/h3&gt;
+
+&lt;p&gt;I went with a super simple &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/commit/080baab1abe78f2d3f508c0b3eede7c6182a0d09&#34;&gt;nginx configuration file&lt;/a&gt;, which is bogus, but should work nonetheless.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;running-the-containers&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3 id=&#34;running-the-containers:8058a1d8ca608171d45c42d3c59fef01&#34;&gt;Running the containers&lt;/h3&gt;
+
+&lt;p&gt;A simple&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;docker-compose up
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;should bring up our creation. I also tagged &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/tree/07-composing-kittehs&#34;&gt;this point of development for your convenience if you do not wish to code along&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;assets-and-images&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3 id=&#34;assets-and-images:8058a1d8ca608171d45c42d3c59fef01&#34;&gt;Assets and images&lt;/h3&gt;
+
+&lt;p&gt;Wait, what about assets? We still get something along the lines of&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;[error] Could not find static manifest at &amp;quot;/app/_build/prod/lib/kitteh/priv/static/manifest.json&amp;quot;. Run &amp;quot;mix phoenix.digest&amp;quot; after building your static files or remove the configuration from &amp;quot;config/prod.exs.&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;in the logs.&lt;/p&gt;
+
+&lt;p&gt;And what about actually serving the images? With out current setup, the &lt;code&gt;nginx&lt;/code&gt; will use the mounted volume under its own &lt;code&gt;/var/uploads&lt;/code&gt; to serve the content of this volume. Running&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;docker-compose run nginx ls -l /var/uploads
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;should yield a list of images. The &lt;code&gt;nginx&lt;/code&gt; container itself is exposed at port &lt;code&gt;4001&lt;/code&gt; - thanks to the &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/blob/080baab1abe78f2d3f508c0b3eede7c6182a0d09/docker-compose.yml#L24&#34;&gt;configuration yaml&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;So, assuming a file named &lt;code&gt;LargeSuperbYellowTurkishAngora.jpeg&lt;/code&gt; actually exists in the data container a simple&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;http get http://localhost:4001/LargeSuperbYellowTurkishAngora.jpeg
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;should give the image back to you. If you are not using &lt;a href=&#34;https://github.com/jkbrzt/httpie&#34;&gt;httpie&lt;/a&gt; yet, I do recommend it!&lt;/p&gt;
+
+&lt;p&gt;So, for now, we can use this and modify our code, specifically the view that renders the image url (called &lt;code&gt;asset_url&lt;/code&gt;):&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-ruby&#34;&gt;# /web/views/page_view.ex
+  def asset_url(image) do
+    &amp;quot;/img/&amp;quot; &amp;lt;&amp;gt; image.token
+  end
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;One of the drawbacks of not having an asset pipeline similar to Rails is that we cannot specify an integrated asset host (that is &lt;strong&gt;not&lt;/strong&gt; completely true, as we can easily just reuse an &lt;code&gt;Application&lt;/code&gt; or environment variable for that). However, it&amp;rsquo;s not as simple as just changeing &lt;code&gt;config.host&lt;/code&gt; in your &lt;code&gt;production.rb&lt;/code&gt;, as the pipeline is not entangled with the framework.&lt;/p&gt;
+
+&lt;p&gt;But that will not stop us, even if it means hardcoding values:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-ruby&#34;&gt;# /web/views/page_view.ex
+  def asset_url(image)
+    &amp;quot;http://localhost:4001/&amp;quot; &amp;lt;&amp;gt; Path.basename(image.path) 
+  end
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;In a production environment, I would probably assign a real subdomain name, like &amp;ldquo;images.kitt.eh&amp;rdquo; or something along these lines.&lt;/p&gt;
+
+&lt;p&gt;Rebuilding and restarting the containers should now present the very same image, but served from the nginx container.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Note&lt;/strong&gt;: At this point I noticed a flaw in the &lt;code&gt;Dockerfile&lt;/code&gt; for the main application - Compilation was not done properly, so I had to reintroduce an env variable to &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/commit/362cb0eae4553c418b4729822429a3d324959cc7&#34;&gt;mark production compilation&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h4 id=&#34;assets:8058a1d8ca608171d45c42d3c59fef01&#34;&gt;Assets&lt;/h4&gt;
+
+&lt;p&gt;Phoenix purposefully does not integrate an asset pipeline and instead delegates to a library called &lt;code&gt;brunch&lt;/code&gt; (see &lt;a href=&#34;https://brunch.io&#34;&gt;brunch.io&lt;/a&gt;) to handle static assets like JavaScript and CSS.&lt;/p&gt;
+
+&lt;p&gt;I personally disagree with the choice of brunch - I&amp;rsquo;d have used webpack myself, but one cannot be too picky when others provide work that is essentially free.&lt;/p&gt;
+
+&lt;p&gt;Anyway, we have different options for solving the assets problem domain:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;Reusing the nginx container (and having the assets land on &amp;ldquo;image.kitt.eh&amp;rdquo;)&lt;/li&gt;
+&lt;li&gt;Introducing a second nginx container (and introducing &amp;ldquo;assets.kitt.eh&amp;rdquo; in proudction)&lt;/li&gt;
+&lt;li&gt;&lt;s&gt;Serve everything via the web stack.&lt;/s&gt;&lt;/li&gt;
+&lt;li&gt;Serve everything via a CDN.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;I am not really going to talk about option number 4. Using a CDN (like Cloudfront) is usually the way to go with bigger production setups as you just cannot match the server infrastructure that is provided to you via these services.&lt;/p&gt;
+
+&lt;p&gt;I am inclined to use option number 2. Assets and images should be different in my opinion and - and that is even more crucial to me - updating the assets should not affect the data within the uploads container. Depending on your requirements, option 3 should also be a very possible solution.&lt;/p&gt;
+
+&lt;p&gt;However, let&amp;rsquo;s introduce a third &lt;code&gt;Dockerfile&lt;/code&gt;, called &lt;code&gt;Dockerfile.assets&lt;/code&gt; (we also rename the existing &lt;code&gt;Dockerfile.nginx&lt;/code&gt; to &lt;code&gt;Dockerfile.uploads&lt;/code&gt;):&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-Dockerfile&#34;&gt;FROM nginx:1.9.11
+# override the default nginx config with our own
+ADD nginx.assets.conf /etc/nginx/nginx.conf
+RUN mkdir /logs
+EXPOSE 80
+CMD [&amp;quot;nginx&amp;quot;, &amp;quot;-g&amp;quot;, &amp;quot;daemon off;&amp;quot;]
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;It&amp;rsquo;s essentially the same one as for uploads. The &lt;code&gt;nginx.conf&lt;/code&gt; looks similar as well, but defines proper mimetypes for all the sublocations (css &amp;amp; js).&lt;/p&gt;
+
+&lt;p&gt;I &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/commit/fa45cac9807a841911bd3d691cdf031fbe50042b&#34;&gt;also updated&lt;/a&gt; the &lt;code&gt;docker-compose.yml&lt;/code&gt; accordingly to include the second nginx to serve assets later on.&lt;/p&gt;
+
+&lt;p&gt;We run into a problem here: so far we just assumend that all the assets are there, ready to go - however, we cannot run &lt;code&gt;brunch build --production&lt;/code&gt;, as this is an &lt;code&gt;npm&lt;/code&gt; dependency. Up until now, we just assumed it was there, as we had it installed anyway. However, a fresh clone of the repo cannot assume that. To keep it a bit shorter, I will omit the steps necessary to make this work, but to give you an idea, here are the options you&amp;rsquo;d have:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;Install &lt;code&gt;nodejs&lt;/code&gt; in the web container (bloating it even more) and then run &lt;code&gt;npm install&lt;/code&gt; in it (bloating it even more). This might be an option if you want everything self-contained and ready to go after cloning the repo&lt;/li&gt;
+&lt;li&gt;Live with it and require the user (or a CI for that matter) to have node installed on their system when building the image&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;I chose option 2 for this exercise and &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/commit/12c83f235321ae172259072cab8f85012c2cb3a1&#34;&gt;documented it in the README&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Unfortunately, I found digesting all the assets and then putting them into &lt;code&gt;/var/assets&lt;/code&gt; at buildtime impossible, as this requires all the containers to be up.&lt;/p&gt;
+
+&lt;p&gt;Thereby running&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;docker-compose run web mix phoenix.digest -o /var/assets
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;is crucical for this to work and can only be done when the containers are running.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Note&lt;/strong&gt;: A solution to this is to invert the dependency and build the separate nginx container with the digested assets in it, mounting its volumes into the web container later on.&lt;/p&gt;
+
+&lt;p&gt;However, asset digestion can be done on demand this way - the volume container will just keep the last version of the digested assets.&lt;/p&gt;
+
+&lt;p&gt;Running the containers now should ideally provide the static assets already:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;# the hash may vary
+http get http://localhost:4002/js/app-&amp;lt;hash&amp;gt;.js
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;should yield our JavaScript. Same goes for our css.&lt;/p&gt;
+
+&lt;p&gt;We also need to update our &lt;code&gt;prod.exs&lt;/code&gt; environment to make the manifest file known:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-ruby&#34;&gt;# /config/prod.exs
+  config :kitteh, Kitteh.Endpoint,
+    http: [port: {:system, &amp;quot;PORT&amp;quot;}],
+    url: [host: &amp;quot;example.com&amp;quot;, port: 80],
+    cache_static_manifest: &amp;quot;/var/assets/manifest.json&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The asset paths in &lt;code&gt;app.html.eex&lt;/code&gt; have to be updated to make this work with the nginx serving our assets (remember, this would be &amp;ldquo;assets.kitt.eh&amp;rdquo; in production):&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-html&#34;&gt;&amp;lt;!-- /web/templates/layout/app.html.eex --&amp;gt;
+
+&amp;lt;!-- [...] --&amp;gt;
+&amp;lt;link rel=&amp;quot;stylesheet&amp;quot; href=&amp;quot;&amp;lt;%= static_url(@conn, &amp;quot;/css/app.css&amp;quot;) %&amp;gt;&amp;quot;&amp;gt;
+&amp;lt;!-- [...] --&amp;gt;
+&amp;lt;script src=&amp;quot;&amp;lt;%= static_url(@conn, &amp;quot;/js/app.js&amp;quot;) %&amp;gt;&amp;quot;&amp;gt;&amp;lt;/script&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This requires a small addition to &lt;code&gt;prod.exs&lt;/code&gt; (&lt;code&gt;static_url&lt;/code&gt;):&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-ruby&#34;&gt;# /config/prod.exs
+config :kitteh, Kitteh.Endpoint,
+  http: [port: {:system, &amp;quot;PORT&amp;quot;}],
+  url: [host: &amp;quot;example.com&amp;quot;, port: 80],
+  static_url: [host: &amp;quot;localhost&amp;quot;, port: 4002],
+  cache_static_manifest: &amp;quot;var/assets/manifest.json&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Rebuilding and running our containers again should now yield results - all the uploaded images are served from an nginx and all of the assets are served from another. also, everything is persisted independently.&lt;/p&gt;
+
+&lt;p&gt;Neat.&lt;/p&gt;
+
+&lt;p&gt;For your convenience, I &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/tree/08-serving-static-content&#34;&gt;added a tag here&lt;/a&gt; so that you can compare progress yourselves.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;looking-back&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;looking-back:8058a1d8ca608171d45c42d3c59fef01&#34;&gt;Looking back&lt;/h2&gt;
+
+&lt;p&gt;We have done a lot so far. We &lt;a href=&#34;https://floriank.github.io/post/using-phoenix-with-docker-part-2-implementation/&#34;&gt;coded a small uploader application&lt;/a&gt; and put most of the dependencies into containers.&lt;/p&gt;
+
+&lt;p&gt;Here is the list of containers used:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;A PostgreSQL for persistance&lt;/li&gt;
+&lt;li&gt;An nginx for serving uploaded images&lt;/li&gt;
+&lt;li&gt;A second nginx for serving static assets like JavaScript and CSS&lt;/li&gt;
+&lt;li&gt;A web application container that holds the application&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;There are also 3 volume containers that are used to share data between the containers and provide persistance.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;cleaning-up&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3 id=&#34;cleaning-up:8058a1d8ca608171d45c42d3c59fef01&#34;&gt;Cleaning up&lt;/h3&gt;
+
+&lt;p&gt;We do have some prolems with the setup as well:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;This might be overkill for such a small application and you should consider bare metal for this setup (or Heroku if you feel so inclined)&lt;/li&gt;
+&lt;li&gt;The web application container is &lt;em&gt;huge&lt;/em&gt;&lt;/li&gt;
+&lt;li&gt;Two nginx are not necessarily better than one&lt;/li&gt;
+&lt;li&gt;There is no proper configuration management yet - most of the stuff we need is hardcoded either in our application or the docker files.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;In fact, let&amp;rsquo;s clean up some problems right here, right now. Introduce a &lt;code&gt;.dockerignore&lt;/code&gt; file and add the following list of patterns:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;# Generate on crash by the VM
+erl_crash.dump
+
+# Static artifacts
+node_modules/
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;That reduces the &lt;code&gt;web&lt;/code&gt; images size &lt;strong&gt;by about 4MB&lt;/strong&gt;, as the &lt;code&gt;node_modules&lt;/code&gt; are not needed in the image. Woah.&lt;/p&gt;
+
+&lt;p&gt;The problem here is that we are using a full &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/blob/08-serving-static-content/Dockerfile#L1&#34;&gt;Ubuntu image&lt;/a&gt; (which I chose for convenience reasons like installing via &lt;code&gt;apt-get&lt;/code&gt;). For procatical purposes we should probably use an &lt;a href=&#34;http://www.alpinelinux.org/&#34;&gt;alpine&lt;/a&gt;-based image to build our application container.&lt;/p&gt;
+
+&lt;p&gt;There is also SSL yet, we&amp;rsquo;re purely on relying on HTTP - which is not a production setup I would endorse in 2016.&lt;/p&gt;
+
+&lt;p&gt;Finally, our main attention should probably also focus on removing items from the codebase in the web container that we do not need - mainly the actual codebase, as Elixir compiles to BEAM code and we would only need that. Just for comparison, we are talking about 18MB in the case of kitteh.&lt;/p&gt;
+
+&lt;p&gt;It depends on how much convenience you want - ultimately, reducing tha base image size should be the &lt;strong&gt;first&lt;/strong&gt; goal in my opinion.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;conclusion&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;conclusion:8058a1d8ca608171d45c42d3c59fef01&#34;&gt;Conclusion&lt;/h2&gt;
+
+&lt;p&gt;If you read this far - thanks! I hope you found the material I provided interesting and you can take something away for your own projects.&lt;/p&gt;
+
+&lt;p&gt;If there are questions for this particular series, you can either write me an email or use &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/issues&#34;&gt;the issues for the project on Github&lt;/a&gt;. Being not a very skillful Elixir developer, I am always thankful for &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/pulls&#34;&gt;Pull Requests&lt;/a&gt; and comments.&lt;/p&gt;
+
+&lt;p&gt;You have reached the end of this series. You might be interested in &lt;a href=&#34;https://floriank.github.io/post/using-phoenix-with-docker-part-1-introduction/&#34;&gt;how everything started&lt;/a&gt; and how it &lt;a href=&#34;https://floriank.github.io/post/using-phoenix-with-docker-part-2-implementation/&#34;&gt;turned out to be implemented after all&lt;/a&gt;.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Using Phoenix with docker, Part 2: Implementation</title>
+      <link>https://floriank.github.io/post/using-phoenix-with-docker-part-2-implementation/</link>
+      <pubDate>Mon, 15 Feb 2016 15:32:22 +0100</pubDate>
+      
+      <guid>https://floriank.github.io/post/using-phoenix-with-docker-part-2-implementation/</guid>
+      <description>
+
+&lt;p&gt;&lt;em&gt;This is part two of a three part series&lt;/em&gt;: &lt;a href=&#34;https://floriank.github.io/post/using-phoenix-with-docker-part-1-introduction/&#34;&gt;Part 1&lt;/a&gt; - &lt;strong&gt;Part 2&lt;/strong&gt; - &lt;a href=&#34;https://floriank.github.io/post/using-phoenix-with-docker-part-3-containerization/&#34;&gt;Part 3&lt;/a&gt;&lt;/p&gt;
+
+&lt;h1 id=&#34;contents:7debb73c6a3fd6f5aa2c2da8cbce28e8&#34;&gt;Contents&lt;/h1&gt;
+
+&lt;!-- MarkdownTOC --&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;#installation&#34;&gt;Installation&lt;/a&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;#elixir&#34;&gt;Elixir&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#phoenix&#34;&gt;Phoenix&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#lets-go&#34;&gt;Let&amp;rsquo;s go&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#scaffolding&#34;&gt;Scaffolding&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#simpler-times&#34;&gt;Simpler times&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#providing-a-frontend&#34;&gt;Providing a &amp;ldquo;frontend&amp;rdquo;&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#new-routes&#34;&gt;New routes&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#reading-the-documentation&#34;&gt;Reading the documentation&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#handle-the-file&#34;&gt;Handle the file&lt;/a&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;#shortcuts&#34;&gt;Shortcuts&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#resizing-images&#34;&gt;Resizing images&lt;/a&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;#genserver&#34;&gt;GenServer&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#resizing&#34;&gt;Resizing&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#problems-of-the-demo-app&#34;&gt;Problems of the demo app&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#conclusion&#34;&gt;Conclusion&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;!-- /MarkdownTOC --&gt;
+
+&lt;p&gt;&lt;a name=&#34;installation&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;installation:7debb73c6a3fd6f5aa2c2da8cbce28e8&#34;&gt;Installation&lt;/h2&gt;
+
+&lt;p&gt;Before we start, please make sure you install Elixir and Phoenix. If you do not care or have already installed both, you can skip the next section.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;elixir&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3 id=&#34;elixir:7debb73c6a3fd6f5aa2c2da8cbce28e8&#34;&gt;Elixir&lt;/h3&gt;
+
+&lt;p&gt;Installing Elixir is actually not too difficult - it&amp;rsquo;s &lt;strong&gt;not&lt;/strong&gt; as convenient as just typing&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;sudo apt-get install elixir
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;as it equires the installation of Erlang and the &lt;strong&gt;O&lt;/strong&gt;pen &lt;strong&gt;T&lt;/strong&gt;elephony &lt;strong&gt;P&lt;/strong&gt;rotocol (OTP). A more detailed guide on how to do the installation of Elixir (including the installation of Erlang/OTP &lt;a href=&#34;http://elixir-lang.org/install.html&#34;&gt;can be found on the homepage&lt;/a&gt; - regardless of your preferred OS-choice.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;phoenix&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3 id=&#34;phoenix:7debb73c6a3fd6f5aa2c2da8cbce28e8&#34;&gt;Phoenix&lt;/h3&gt;
+
+&lt;p&gt;Once you have installed Elixir, it&amp;rsquo;s time to setup Phoenix. This can be done via &lt;code&gt;hex&lt;/code&gt;, which in turn can be installed via &lt;code&gt;mix&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;mix local.hex
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;and then installing Phoenix via:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;mix archive.install https://github.com/phoenixframework/archives/raw/master/phoenix_new.ez
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;If you need more detail, &lt;a href=&#34;http://www.phoenixframework.org/docs/installation&#34;&gt;consider visiting the Phoenix docs&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;lets-go&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;let-s-go:7debb73c6a3fd6f5aa2c2da8cbce28e8&#34;&gt;Let&amp;rsquo;s go&lt;/h2&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;mix phoenix.new kitteh
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;should create a new Phoenix project for you in the folder &lt;code&gt;./kitteh&lt;/code&gt;. When asked to install dependencies, you should probably say yes, although it&amp;rsquo;s irrelevant since we&amp;rsquo;re not going to build a complex frontend (but there is additional css, &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/blob/05-resizing-cats/web/static/css/style.css&#34;&gt;I promise&lt;/a&gt;).&lt;/p&gt;
+
+&lt;p&gt;You should end up with something like this:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;.
+├── brunch-config.js
+├── _build
+├── config
+├── deps
+├── lib
+├── mix.exs
+├── mix.lock
+├── node_modules
+├── package.json
+├── priv
+├── README.md
+├── test
+└── web
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;If you do not wish to do anything yourself, I prepared a &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix&#34;&gt;repository here&lt;/a&gt;. You may use the tag &lt;code&gt;01-lets-go&lt;/code&gt; &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/tree/01-lets-go&#34;&gt;to get the initial codebase&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;scaffolding&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;scaffolding:7debb73c6a3fd6f5aa2c2da8cbce28e8&#34;&gt;Scaffolding&lt;/h2&gt;
+
+&lt;p&gt;Scaffolding is a pretty fast and reliable way in Phoenix to get off the ground. We&amp;rsquo;re not going to use it to its full potential here.&lt;/p&gt;
+
+&lt;p&gt;Consider generating a controller:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;mix phoenix.gen.html --no-model Image images
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This might be a bit counter-intuitive (it is to me) - but generating just a controller and its views requires the all-including &lt;code&gt;gen.html&lt;/code&gt; task, which normally generates a complete resource with views associated, complete with model files included.&lt;/p&gt;
+
+&lt;p&gt;Looking at our newly generated controller, we notice that it has been filled with all kind of good stuff:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-ruby&#34;&gt;defmodule Kitteh.ImageController do
+  use Kitteh.Web, :controller
+
+  alias Kitteh.Image
+
+  plug :scrub_params, &amp;quot;image&amp;quot; when action in [:create, :update]
+
+  def index(conn, _params) do
+    images = Repo.all(Image)
+    render(conn, &amp;quot;index.html&amp;quot;, images: images)
+  end
+
+  def new(conn, _params) do
+    changeset = Image.changeset(%Image{})
+    render(conn, &amp;quot;new.html&amp;quot;, changeset: changeset)
+  end
+
+  def create(conn, %{&amp;quot;image&amp;quot; =&amp;gt; image_params}) do
+    changeset = Image.changeset(%Image{}, image_params)
+
+    case Repo.insert(changes
+# [...]
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Woah.&lt;/p&gt;
+
+&lt;p&gt;Hold your horses. All I wanted was a simple controller with an action or two.&lt;/p&gt;
+
+&lt;p&gt;So, let&amp;rsquo;s rollback the changes. There is no convenient way (i.e. reverse generators) to do this yet, so&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;git clean -f &amp;amp;&amp;amp; rm -rf web/templates/images
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;to the rescue. Phew.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;simpler-times&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;simpler-times:7debb73c6a3fd6f5aa2c2da8cbce28e8&#34;&gt;Simpler times&lt;/h2&gt;
+
+&lt;p&gt;Let&amp;rsquo;s fall back to the already generated &lt;code&gt;PageController&lt;/code&gt;. It already has an action &lt;code&gt;index&lt;/code&gt; ready to use.&lt;/p&gt;
+
+&lt;p&gt;At the moment it renders a file called &lt;code&gt;index.html.eex&lt;/code&gt; (&lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/blob/lets-go/web/templates/page/index.html.eex&#34;&gt;link for the lazy&lt;/a&gt;). It constitutes a demo partial that together with the &lt;code&gt;app.html.eex&lt;/code&gt; (&lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/blob/lets-go/web/templates/layout/app.html.eex&#34;&gt;this one here&lt;/a&gt;) forms a complete webpage at the &lt;code&gt;/&lt;/code&gt; route.&lt;/p&gt;
+
+&lt;p&gt;We can look at it on the locally running instance at &lt;a href=&#34;http://localhost:4000&#34;&gt;localhost&lt;/a&gt; by executing&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;iex -S mix phoenix.server
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Neat.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;providing-a-frontend&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;providing-a-frontend:7debb73c6a3fd6f5aa2c2da8cbce28e8&#34;&gt;Providing a &amp;ldquo;frontend&amp;rdquo;&lt;/h2&gt;
+
+&lt;p&gt;This should be easy.&lt;/p&gt;
+
+&lt;p&gt;Phoenix includes &lt;a href=&#34;https://getbootstrap.com&#34;&gt;Bootstrap&lt;/a&gt; by default. I could disagree with that, but then again, using Bootstrap is not to inconvenient.&lt;/p&gt;
+
+&lt;p&gt;The Phoenix team apparently decided to delegate the frontend choices to the userbase. A wise choice in the short term, as the whole frontend sector is quite fragmented at the moment (early 2016).&lt;/p&gt;
+
+&lt;p&gt;That being said, replacing everything in &lt;code&gt;index.html.eex&lt;/code&gt; with&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-html&#34;&gt;&amp;lt;div class=&amp;quot;row&amp;quot;&amp;gt;
+  &amp;lt;div class=&amp;quot;col-xs-12&amp;quot;&amp;gt;
+    &amp;lt;div class=&amp;quot;panel panel-default&amp;quot;&amp;gt;
+      &amp;lt;div class=&amp;quot;panel-heading&amp;quot;&amp;gt;
+        &amp;lt;h1 class=&amp;quot;panel-title&amp;quot;&amp;gt;Kitteh uploader&amp;lt;/h1&amp;gt;
+      &amp;lt;/div&amp;gt;
+      &amp;lt;div class=&amp;quot;panel-body&amp;quot;&amp;gt;
+        &amp;lt;p&amp;gt;Upload a cat picture. Doggies are welcome, too.&amp;lt;/p&amp;gt;
+        &amp;lt;form action=&amp;quot;/upload&amp;quot; method=&amp;quot;post&amp;quot; enctype=&amp;quot;multipart/form-data&amp;quot; class=&amp;quot;form&amp;quot;&amp;gt;
+          &amp;lt;div class=&amp;quot;form-group&amp;quot;&amp;gt;
+            &amp;lt;label for=&amp;quot;image&amp;quot; class=&amp;quot;control-label&amp;quot;&amp;gt;Image&amp;lt;/label&amp;gt;
+            &amp;lt;input type=&amp;quot;file&amp;quot; required id=&amp;quot;image&amp;quot; name=&amp;quot;image&amp;quot; class=&amp;quot;form-control&amp;quot;&amp;gt;
+          &amp;lt;/div&amp;gt;
+        &amp;lt;/form&amp;gt;
+      &amp;lt;/div&amp;gt;
+    &amp;lt;/div&amp;gt;
+  &amp;lt;/div&amp;gt;
+&amp;lt;/div&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;should do the trick.&lt;/p&gt;
+
+&lt;p&gt;No, we are not using the &lt;a href=&#34;http://hexdocs.pm/phoenix_html/Phoenix.HTML.Form.html&#34;&gt;form builders that Phoenix provides&lt;/a&gt;, but feel free to read up on them.  We can just use plain HTML instead.&lt;/p&gt;
+
+&lt;p&gt;If that is all too much frontend stuff for you, i suggest you look at the &lt;code&gt;02-simple-frontend&lt;/code&gt; &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/tree/02-simple-frontend&#34;&gt;tag here&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;new-routes&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;new-routes:7debb73c6a3fd6f5aa2c2da8cbce28e8&#34;&gt;New routes&lt;/h2&gt;
+
+&lt;p&gt;We defined an &lt;code&gt;/upload&lt;/code&gt; path that the form uses, but this route is nowhere to be found. Let&amp;rsquo;s add it:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-ruby&#34;&gt;# see web/router.ex
+# [...]
+  scope &amp;quot;/&amp;quot;, Kitteh do
+    pipe_through :browser # Use the default browser stack
+
+    get &amp;quot;/&amp;quot;, PageController, :index
+
+    # the new route
+    post &amp;quot;/upload&amp;quot;, PageController, :upload
+  end
+# [...]
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;&lt;strong&gt;Note&lt;/strong&gt; I also sneakily added a &lt;code&gt;required&lt;/code&gt; attribute to the file-&lt;code&gt;input&lt;/code&gt;, to avoid &lt;a href=&#34;http://i.imgur.com/GluNcro.jpg&#34;&gt;any validation concerns&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;If we try to send the form n&amp;hellip; we notice that we&amp;rsquo;re missing a way to submit the form and add a button first.&lt;/p&gt;
+
+&lt;p&gt;If we try to send the form now, it will crash, since no action will take care of the request.&lt;/p&gt;
+
+&lt;p&gt;But wait, how do I upload stuff anyway? &lt;a href=&#34;http://www.phoenixframework.org/docs/file-uploads&#34;&gt;Should the framework not provide me with some way to make this easier?&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Kids, &lt;strong&gt;read your documentation&lt;/strong&gt; before heading into battle.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;reading-the-documentation&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;reading-the-documentation:7debb73c6a3fd6f5aa2c2da8cbce28e8&#34;&gt;Reading the documentation&lt;/h2&gt;
+
+&lt;p&gt;Turns out, the Phoenix people do provide something to do file uploads.&lt;/p&gt;
+
+&lt;p&gt;That means we can actually use the form builders after all since we&amp;rsquo;re going the changeset route.&lt;/p&gt;
+
+&lt;p&gt;I feel silly.&lt;/p&gt;
+
+&lt;p&gt;Create a new model:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;# note that this is just my initial try, have a look at the migrations for the actual fields used
+mix phoenix.gen.model Image original_name:string url:string size:integer 
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;and migrate the database:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;mix ecto.create &amp;amp;&amp;amp; mix ecto.migrate
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;If this fails for you, make sure you have a valid configuration for you database. To configure your database, see your local &lt;code&gt;config/dev.exs&lt;/code&gt; (see &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/blob/02-simple-frontend/config/dev.exs&#34;&gt;here&lt;/a&gt;).&lt;/p&gt;
+
+&lt;p&gt;So, finally, we can create a changeset in the controller and use it in the template:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-erb&#34;&gt;&amp;lt;!-- index.html.eex, replacing the &amp;lt;form&amp;gt; --&amp;gt;
+&amp;lt;%= form_for @changeset, &amp;quot;/upload&amp;quot;, [multipart: true], fn f -&amp;gt;  %&amp;gt;
+  &amp;lt;div class=&amp;quot;form-group&amp;quot;&amp;gt;
+    &amp;lt;label for=&amp;quot;image_file&amp;quot; class=&amp;quot;control-label&amp;quot;&amp;gt;Image&amp;lt;/label&amp;gt;
+    &amp;lt;%= file_input f, :file, required: true %&amp;gt;
+  &amp;lt;/div&amp;gt;
+  &amp;lt;div class=&amp;quot;form-group&amp;quot;&amp;gt;
+    &amp;lt;%= submit &amp;quot;Upload&amp;quot;, class: &amp;quot;btn btn-primary&amp;quot; %&amp;gt;
+  &amp;lt;/div&amp;gt;
+&amp;lt;% end %&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The &lt;code&gt;@changeset&lt;/code&gt; is introduced and passed to the view in the controller:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-ruby&#34;&gt;# web/controllers/page_controller.ex
+# [...]
+  alias Kitteh.Repo
+  alias Kitteh.Image
+
+  def index(conn, _params) do
+    changeset = Image.changeset(%Image{})
+    render conn, &amp;quot;index.html&amp;quot;, changeset: changeset
+  end
+# [...]
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;If all goes well, this should render our frontend again. I also snuck in the missing Button for submitting the form. Please note that in order to actually use the line&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-erb&#34;&gt;&amp;lt;%= file_input f, :file, required: true %&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;a &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/blob/03-actually-read-the-docs/web/models/image.ex#L8&#34;&gt;virtual&lt;/a&gt; &lt;code&gt;file&lt;/code&gt; attribute has to exist in the &lt;code&gt;Image&lt;/code&gt; model.&lt;/p&gt;
+
+&lt;p&gt;If this was all just ramblings of a mad developer for you, you can also check out the tag &lt;code&gt;03-actually-read-the-docs&lt;/code&gt; &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/tree/03-actually-read-the-docs&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;handle-the-file&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;handle-the-file:7debb73c6a3fd6f5aa2c2da8cbce28e8&#34;&gt;Handle the file&lt;/h2&gt;
+
+&lt;p&gt;It&amp;rsquo;s time for some action in the controller, because at the moment our application will crash if we try to submit the form with an image.&lt;/p&gt;
+
+&lt;p&gt;The controller action has to do the following:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;&lt;s&gt;Validate the file given&lt;/s&gt;&lt;/li&gt;
+&lt;li&gt;Move the uploaded file under a new name into a folder we can access&lt;/li&gt;
+&lt;li&gt;Save the model with some information on the file uploaded to the DB.&lt;/li&gt;
+&lt;li&gt;if that was successful, redirect to the &lt;code&gt;show&lt;/code&gt; action for the new image&lt;/li&gt;
+&lt;li&gt;(alt) if not, redirect to the &lt;code&gt;index&lt;/code&gt; with a message&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;I will skip the validation on the file - one could do this by validating the &lt;code&gt;size&lt;/code&gt; field of the changeset before inserting.&lt;/p&gt;
+
+&lt;p&gt;We&amp;rsquo;ll skip this here and assume that the file given is something we want.&lt;/p&gt;
+
+&lt;p&gt;Phoenix will give us the file as a &lt;code&gt;Plug.Upload&lt;/code&gt; struct in our &lt;code&gt;params&lt;/code&gt; to the newly created &lt;code&gt;upload&lt;/code&gt; function in &lt;code&gt;PageController&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-ruby&#34;&gt;# web/controllers/page_controller.ex
+# [...]
+
+  def upload(conn, params) do
+    # now what?
+  end
+
+# [...]
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Thinking like a Rails developer, the fat model approach comes to mind. Let&amp;rsquo;s put all the logic for this into a model and let the controller action pass in the params. Be done with it, move on. Have a beer maybe.&lt;/p&gt;
+
+&lt;p&gt;This is not viable here, since Elixir ultimately does not care where your functions live. &lt;em&gt;There are no models, just functions and structs&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;I decided in favour of a more controller based approach. The controller will do the the copying and transform the file input into a usable &lt;code&gt;params&lt;/code&gt; map:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-ruby&#34;&gt;# web/controllers/page_controller.ex
+# [...]
+  def upload(conn, %{ &amp;quot;image&amp;quot; =&amp;gt; %{ &amp;quot;file&amp;quot; =&amp;gt; file } }) do
+    # transform the uploaded file into a changeset
+    params = file
+      |&amp;gt; copy_file(unique_name)
+    changeset = Image.changeset(%Image{}, params)
+
+    # try to insert the newly generated changeset
+  end
+# [...]
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The copy file function acutally does the more &amp;ldquo;heavy lifting&amp;rdquo;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-ruby&#34;&gt;defp copy_file(file) do
+  extension = Path.extname(file.filename)
+  target = target_path &amp;lt;&amp;gt; name &amp;lt;&amp;gt; extension
+  case File.copy(file.path, target) do
+    {:ok, size} -&amp;gt;
+      %{
+        generated_name: name,
+        token: String.downcase(name),
+        path: target,
+        original_name: file.filename,
+        content_type: file.content_type,
+        size: size
+      }
+    {:error, _} -&amp;gt;
+      %{}
+  end
+end
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Depending on whether the copying was successful, we either get a proper &lt;code&gt;params&lt;/code&gt; map with all the necessary information filled in or we are left with an empty map that will never pass our validations.&lt;/p&gt;
+
+&lt;p&gt;Note that &lt;code&gt;target_path&lt;/code&gt; actually behaves differently from what you would expect. In Phoenix, you do not find the same behaviour as with Rails&amp;rsquo; &lt;code&gt;Rails.root&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;For now, we need a target path that lives within our application and we can access. But our codebase will be compiled (in contrast to a Ruby codebase), so we cannot be sure where our bytecode ends up (&lt;em&gt;Hint&lt;/em&gt;: It&amp;rsquo;s in the &lt;code&gt;./_build&lt;/code&gt; folder).&lt;/p&gt;
+
+&lt;p&gt;We can do this though:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-ruby&#34;&gt;Application.app_dir(:kitteh, &amp;quot;priv&amp;quot;)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;See &lt;a href=&#34;http://stackoverflow.com/questions/33931176/finding-a-file-in-a-phoenix-app-script-rails-root#&#34;&gt;this StackOverflow answer&lt;/a&gt; for more information. The actual implementation used is found &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/blob/04-enable-uploading/web/controllers/page_controller.ex#L81&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;After having generated a &lt;code&gt;params&lt;/code&gt; map, the rest is just the same as in any Phoenix tutorial you might find:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;generate a changeset based on &lt;code&gt;Image&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;insert that changeset&lt;/li&gt;
+&lt;li&gt;redirect to the show action or abort and rerender the index template&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;In case you were wondering:&lt;/p&gt;
+
+&lt;p&gt;The shorthand generated for the kitty is generated via &lt;code&gt;Image.generate_unique_name&lt;/code&gt;, which &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/blob/04-enable-uploading/web/models/image.ex#L41&#34;&gt;uses collected seed data&lt;/a&gt; to generate a different combination of these attributes. We have to try again if we actually used the name before in the database. Since Elixir does not have any loops, we &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/blob/04-enable-uploading/web/controllers/page_controller.ex#L56&#34;&gt;resort to recursion&lt;/a&gt; until we find a name that we can use.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Note&lt;/strong&gt;: This has no safety measures - if all combinations of the attributes are used up, our database is &amp;ldquo;full&amp;rdquo; and we are screwed.&lt;/p&gt;
+
+&lt;p&gt;After the image is persisted we redirect to &lt;code&gt;show&lt;/code&gt;. Additionally, an &lt;code&gt;ImageController&lt;/code&gt; is introduced with a &lt;code&gt;show&lt;/code&gt; action &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/blob/04-enable-uploading/web/controllers/image_controller.ex#L6&#34;&gt;here&lt;/a&gt; to actually serve up the image for now. This is intermediary - ultimately, we&amp;rsquo;ll not use Phoenix to serve assets in &amp;ldquo;production&amp;rdquo;.&lt;/p&gt;
+
+&lt;p&gt;If all goes well, the upload should work and the original image should be served under a memorable shorthand.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;shortcuts&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3 id=&#34;shortcuts:7debb73c6a3fd6f5aa2c2da8cbce28e8&#34;&gt;Shortcuts&lt;/h3&gt;
+
+&lt;p&gt;If this is all to much coding and you would like the easy way out, check out the tag &lt;code&gt;04-enable-uploading&lt;/code&gt; &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/tree/04-enable-uploading&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;resizing-images&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;resizing-images:7debb73c6a3fd6f5aa2c2da8cbce28e8&#34;&gt;Resizing images&lt;/h2&gt;
+
+&lt;p&gt;Remember the image modifiers? Like &amp;ldquo;Tiny&amp;rdquo;, &amp;ldquo;Large&amp;rdquo; and &amp;ldquo;Monstrous&amp;rdquo;? We forgot about those.&lt;/p&gt;
+
+&lt;p&gt;It would be nice if we had all the images for the different sized images pre-generated. We could use the same mechanisms we already have implemented to serve them.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;genserver&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3 id=&#34;genserver:7debb73c6a3fd6f5aa2c2da8cbce28e8&#34;&gt;GenServer&lt;/h3&gt;
+
+&lt;p&gt;In a (newer) Rails environment, we could utilize anything that fulfills the interface of [&lt;code&gt;ActiveJob&lt;/code&gt;](&lt;a href=&#34;http://edgeguides.rubyonrails.org/active_job_basics.html&#34;&gt;http://edgeguides.rubyonrails.org/active_job_basics.html&lt;/a&gt;, like an adapter to &lt;a href=&#34;http://sidekiq.org/&#34;&gt;Sidekiq&lt;/a&gt; or the &lt;code&gt;delayed_job&lt;/code&gt; &lt;a href=&#34;https://github.com/collectiveidea/delayed_job&#34;&gt;gem&lt;/a&gt; gem. We basically spin up a second OS process to generate the image, regardless of the solution.&lt;/p&gt;
+
+&lt;p&gt;Not an option here though. There are some solutions to queues and background jobs, but we are on the Erlang VM anyway, so we can utilize the technology available to us. After all, BEAM processes are cheap and lightweight.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://elixir-lang.org/getting-started/mix-otp/genserver.html&#34;&gt;GenServer&lt;/a&gt; might be the answer here. But actually having a long running process in the background that we can use as a service might be overkill here.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s use &lt;code&gt;Task&lt;/code&gt; instead. &lt;code&gt;Task&lt;/code&gt; is a wrapper around Elixirs &lt;code&gt;spawn&lt;/code&gt; function and can be used for a &lt;a href=&#34;http://elixir-lang.org/docs/v1.1/elixir/Task.html&#34;&gt;multitude of things&lt;/a&gt; that are actually more advanced than we do right here, right now.&lt;/p&gt;
+
+&lt;p&gt;Looking into &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/commit/3652cbc3287e7fd832e7ad37a0acd5550ea0b36d#diff-3f35d230596bca22de76cff4dd188e4cR82&#34;&gt;the code&lt;/a&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-ruby&#34;&gt;defp create_sizes(image) do
+  sizes = %{ &amp;quot;Tiny&amp;quot; =&amp;gt; &amp;quot;90&amp;quot;, &amp;quot;Large&amp;quot; =&amp;gt; &amp;quot;300&amp;quot;, &amp;quot;Monstrous&amp;quot; =&amp;gt; &amp;quot;600&amp;quot; }
+  original_file = image.path
+  Enum.each sizes, fn({ label, size }) -&amp;gt;
+    Task.start fn -&amp;gt;
+      name = label &amp;lt;&amp;gt; image.generated_name
+      file_params = resize(image)
+        |&amp;gt; copy_file name
+      changeset = Image.changeset(%Image{}, file_params)
+        |&amp;gt; Repo.insert
+    end
+  end
+end
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Using &lt;code&gt;Task.start&lt;/code&gt; creates a subprocess that is &lt;em&gt;not linked&lt;/em&gt; to the current process. Process linking here is not strictly necessary, as this is implemented as a fire-and-forget strategy. In contrast to &lt;code&gt;Task.start_link&lt;/code&gt;, we&amp;rsquo;re not linking our main process (&lt;code&gt;kitteh&lt;/code&gt;) to the new process. In case it crashes, we do not want to tear down our application (process) as well.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Note&lt;/strong&gt;: I had some problems finding out on how to match function call in using &lt;code&gt;Enum.each&lt;/code&gt; against the result of the map. The resulting argument is matched against a tuple. Might be trivial, but just in case you were wondering.&lt;/p&gt;
+
+&lt;p&gt;This has the &lt;em&gt;notable&lt;/em&gt; disadvantage every fire-and-forget strategy has - we do not know if we actually create the images. Good enough for this application, but for something production-ready, one should look for some bidirectional communication. Just in case, you know, you maybe want to connect these images to one another.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;resizing&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;resizing:7debb73c6a3fd6f5aa2c2da8cbce28e8&#34;&gt;Resizing&lt;/h2&gt;
+
+&lt;p&gt;Resizing images is something one should probably be too lazy to implement oneself. Enter &lt;code&gt;mogrify&lt;/code&gt; - it is &lt;a href=&#34;https://github.com/route/mogrify&#34;&gt;a wrapper library&lt;/a&gt; for ImageMagick, providing us with functions for handling image-resizing.&lt;/p&gt;
+
+&lt;p&gt;We should make a mental note here as we introduce a hard dependency for our docker containers later on. Any container that we want to create for this application now has to provide this dependency.&lt;/p&gt;
+
+&lt;p&gt;With &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/commit/b7724faae9725e127f33734bcfaf2eb0ed79a101&#34;&gt;another commit&lt;/a&gt;, the resize function is introduced:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-ruby&#34;&gt;defp resize(image, name, size) do
+  new_path = target_path &amp;lt;&amp;gt; name &amp;lt;&amp;gt; Path.extname(image.path)
+  new_image = open(image.path) |&amp;gt; copy |&amp;gt; resize(size) |&amp;gt; save(new_path)
+  %{
+    generated_name: name,
+    token: String.downcase(name),
+    path: new_path,
+    original_name: image.original_name,
+    content_type: image.content_type,
+    size: image.size
+  }
+end
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This should create all the resized versions. We can also utilize the builtin &lt;code&gt;Mogrify.copy&lt;/code&gt; function to skip manual copying as we did for the initial image. We end up with returning so params we can use to create another changeset and insert everything. neat, the rest of the system should now work for the resized images as well.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Note&lt;/strong&gt;: Somewhere around this point I noticed &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/commit/b7724faae9725e127f33734bcfaf2eb0ed79a101#diff-8c237d3166e777cbb3d401efc40b1c62R19&#34;&gt;a screw up in the router&lt;/a&gt; as matching order was off. This lead to a redirect to &lt;code&gt;/&lt;/code&gt; after the initial image had been created.&lt;/p&gt;
+
+&lt;p&gt;At this point, our image uploader should be feature complete. Altough being the duct-tape ghetto version it now is, it should provide a good bassis to play around with in the next part.&lt;/p&gt;
+
+&lt;p&gt;If this is all the same to you and you could not care less about how the images are generated and stored exactly, check out the tag &lt;code&gt;05-resizing-cats&lt;/code&gt; &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/tree/05-resizing-cats&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;problems-of-the-demo-app&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;problems-of-the-demo-app:7debb73c6a3fd6f5aa2c2da8cbce28e8&#34;&gt;Problems of the demo app&lt;/h2&gt;
+
+&lt;p&gt;This demo application has quite a few problems, some of them already discussed, some of them a little less obvious:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;no tests&lt;/strong&gt; - this is a biggie and nothing to sweep under the rug. Since this is not intended for production purposes, we sweep it under the rug&lt;/li&gt;
+&lt;li&gt;the amount of images uploaded is limited to the combination limit of the seed data&lt;/li&gt;
+&lt;li&gt;Naming is somewhat bad&lt;/li&gt;
+&lt;li&gt;no validations on &lt;code&gt;Image&lt;/code&gt; changesets besides the required fields&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;[...]&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;The list is not complete, but one can always find things to improve. For example, by just supporting another &lt;code&gt;type&lt;/code&gt;, e.g. &amp;ldquo;Doggy&amp;rdquo; in addition to &amp;ldquo;Kitty&amp;rdquo;, we could double the image capacity. We could also make sure that all images have been created using &lt;code&gt;Task.await&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Nevertheless, it should make a good demo app as it has almost everything - a web app, some need for a database, static data that has to be stored and served from somewhere. All the good stuff.&lt;/p&gt;
+
+&lt;p&gt;there is one major problem when it comes to Live reload. I personally am not a fan of such a feature, but it is included in Phoenix by default. I had to &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/commit/9224dcf92a42a26685ac7fc3e9f019095c0d99e0&#34;&gt;disable it in dev&lt;/a&gt;, since it interfered with the upload feature. the uploaded into a folder that is live reloaded apparently wasn&amp;rsquo;t the best of my ideas.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;conclusion&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;conclusion:7debb73c6a3fd6f5aa2c2da8cbce28e8&#34;&gt;Conclusion&lt;/h2&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://floriank.github.io/post/using-phoenix-with-docker-part-3-containerization/&#34;&gt;In the next part&lt;/a&gt;, we&amp;rsquo;ll finally look into using &lt;code&gt;docker&lt;/code&gt; to gain containers for our project and use &lt;code&gt;docker compose&lt;/code&gt; to orchestrate our system.&lt;/p&gt;
+
+&lt;p&gt;If you already forgot what this was all about, &lt;a href=&#34;https://floriank.github.io/post/using-phoenix-with-docker-part-1-introduction/&#34;&gt;check out part 1 to get a re-introduction&lt;/a&gt;.&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Using Phoenix with docker, Part 1: Introduction</title>
+      <link>https://floriank.github.io/post/using-phoenix-with-docker-part-1-introduction/</link>
+      <pubDate>Mon, 15 Feb 2016 12:21:24 +0100</pubDate>
+      
+      <guid>https://floriank.github.io/post/using-phoenix-with-docker-part-1-introduction/</guid>
+      <description>
+
+&lt;p&gt;&lt;em&gt;This is part one of a three part series&lt;/em&gt;: &lt;strong&gt;Part 1&lt;/strong&gt; - &lt;a href=&#34;https://floriank.github.io/post/using-phoenix-with-docker-part-2-implementation/&#34;&gt;Part 2&lt;/a&gt; - &lt;a href=&#34;https://floriank.github.io/post/using-phoenix-with-docker-part-3-containerization/&#34;&gt;Part 3&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;This part is an introduction to the project - consider &lt;a href=&#34;https://floriank.github.io/post/using-phoenix-with-docker-part-2-implementation/&#34;&gt;skipping to part 2&lt;/a&gt; if you do want some code&lt;/em&gt;&lt;/p&gt;
+
+&lt;h1 id=&#34;contents:7ae9b8d0f921bacfe0c6da25116272e8&#34;&gt;Contents&lt;/h1&gt;
+
+&lt;!-- MarkdownTOC --&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;#using-phoenix--elixir&#34;&gt;Using Phoenix &amp;amp; Elixir&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#using-docker&#34;&gt;Using docker&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#project-kitteh&#34;&gt;Project Kitteh&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#continuing&#34;&gt;Continuing&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;!-- /MarkdownTOC --&gt;
+
+&lt;p&gt;A &lt;a href=&#34;https://kholbekj.surge.sh&#34;&gt;colleague of mine&lt;/a&gt; will not shut up about &lt;a href=&#34;https://elixir-lang.org&#34;&gt;this&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Working at a company using Ruby for day to day work, Elixir seems pretty appealing. And since I tried out &lt;a href=&#34;http://learnyouahaskell.com/&#34;&gt;Haskell&lt;/a&gt; some years ago it seems kind of familiar. Especially since I didn&amp;rsquo;t really grasp the advantage of function pipelines and data structures back then. Also, working with PHP was so convenient at the time. I do recommend checking out Haskell at least once in your life, even though it&amp;rsquo;s (visible) presence in modern web development is slim.&lt;/p&gt;
+
+&lt;p&gt;Waking up from that hellish nightmare of Magento-based shop systems, I found myself working with Ruby (and Rails) a lot. Ruby is nice enough, but like every nice language it has some major problems of its own, like a missing language specification. Rails on top of it does make rapid development a joy, but its conventions are debatable and I&amp;rsquo;d argue that for everything good it brought us, it kicked us in the groin somewhere else (Looking at you, Turbolinks).&lt;/p&gt;
+
+&lt;p&gt;Rails introduced a lot of structure to web projects (seeing that web frameworks in other languages adopt to the same and or similiar structure), but, as most people I work with tell me these days, &lt;em&gt;&amp;ldquo;it&amp;rsquo;s time to move on&amp;rdquo;&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;So - Elixir will make everything magically better, right?&lt;/p&gt;
+
+&lt;p&gt;Probably not.&lt;/p&gt;
+
+&lt;p&gt;Show me a new &amp;ldquo;advanced&amp;rdquo; technology everyone praises, I&amp;rsquo;ll show you at least one developer who is able to screw things up in your project with it.&lt;/p&gt;
+
+&lt;p&gt;A good measure of a new language - to me - therefore would be how strongly you have to stick to the idioms that the language provides to solve your problems. Granted, this requires reflection on one&amp;rsquo;s own side to determine which kind of problems are to be solved. But that is just me rambling on what programming actually is, besides writing the code.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;using-phoenix--elixir&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;using-phoenix-elixir:7ae9b8d0f921bacfe0c6da25116272e8&#34;&gt;Using Phoenix &amp;amp; Elixir&lt;/h2&gt;
+
+&lt;p&gt;Introduce Elixir. Elixir runs on the &lt;a href=&#34;https://www.wikiwand.com/en/Erlang_(programming_language)&#34;&gt;Erlang&lt;/a&gt; VM called BEAM. Being almost as old as myself (the first version of it was released in 1986), it&amp;rsquo;s one of the pieces of software that have been around so long it&amp;rsquo;s practically optimized to a degree that no recently created project is able to attain.&lt;/p&gt;
+
+&lt;p&gt;The fans usually pull out the &lt;a href=&#34;http://www.wired.com/2015/09/whatsapp-serves-900-million-users-50-engineers/&#34;&gt;WhatsApp example here&lt;/a&gt;. On one hand this has to do with the Erlang VM being extremly well optimized and well maintained. On the other hand the &lt;a href=&#34;https://www.quora.com/How-is-FreeBSDs-network-stack-superior-to-that-of-Linux&#34;&gt;network stack of FreeBSD&lt;/a&gt; is a beast by itself. I confess I never looked into it, but I hear the praise from over the hills.&lt;/p&gt;
+
+&lt;p&gt;Using Erlang is a good idea apparently and Elixir makes it easier, because it packages it all in a more Ruby-esque, more &amp;ldquo;friendly&amp;rdquo; syntax. We can relate and do the same thing we always do - building our applications. Can&amp;rsquo;t be that different from the JVM, can it now? We got used to &lt;a href=&#34;https://jruby.org&#34;&gt;jRuby&lt;/a&gt;. And I think that one gal in the basement is still using and maintaining her own fork of &lt;a href=&#34;https://ironruby.net&#34;&gt;IronRuby&lt;/a&gt;. She does not come to Christmas parties anymore.&lt;/p&gt;
+
+&lt;p&gt;Except we cannot - since Elixirs concepts are vastly different from what Ruby can provide you with. And you should keep that in mind - especially when starting out. I highly recommend &lt;a href=&#34;https://pragprog.com/book/elixir12/programming-elixir-1-2&#34;&gt;Dave Thomas&amp;rsquo; book here&lt;/a&gt; to start learning Elixir.&lt;/p&gt;
+
+&lt;p&gt;But since we&amp;rsquo;re doing web development, let&amp;rsquo;s take a look at &lt;a href=&#34;http://phoenixframework.org&#34;&gt;Phoenix&lt;/a&gt; - the &amp;ldquo;Rails of the Elixir&amp;rdquo; world. It promises to bring the joy Rails development (and the useful conventions that come with it) and eliminating some of the more inconvient Rails-isms.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;using-docker&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;using-docker:7ae9b8d0f921bacfe0c6da25116272e8&#34;&gt;Using docker&lt;/h2&gt;
+
+&lt;p&gt;Before diving into preparing a demo project let me quickly express that I find deployment of Phoenix/Elixir somewhat inconvenient. With Rails, you just use &lt;a href=&#34;https://heroku.com&#34;&gt;Heroku&lt;/a&gt;. That can be hard on your budget though (or on your mental health, as the Asset pipeline made your slug size explode again). So you might go on and deploy on your own machines, deciding to hire a DevOps guy in the process and then silently weep how hard actual scalable deployment is and that it shouldn&amp;rsquo;t come as an afterthought.&lt;/p&gt;
+
+&lt;p&gt;At the time of writing, Elixir has less convenient options (from what I can tell), so containerization might be a solution to this problem. After all, this approach will shift responsibility for having the dependencies installed to you instead of relying on your administrator to do so.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Note&lt;/strong&gt;: I am aware that Heroku supports Elixir these days. I have not tried it yet, but my assumption is that not everyone chooses the expensive and convenient lock-in that Heroku provides.&lt;/p&gt;
+
+&lt;p&gt;So, I think it would be reasonable to try out some containers for the time being.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;project-kitteh&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;project-kitteh:7ae9b8d0f921bacfe0c6da25116272e8&#34;&gt;Project Kitteh&lt;/h2&gt;
+
+&lt;p&gt;So, let us prepare something cat related to containerize and deply somewhere.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Note&lt;/strong&gt;: If you have not worked with Phoenix before, there are &lt;a href=&#34;https://blog.codecentric.de/en/2016/01/elixir-phoenix-couchdb-introduction/&#34;&gt;some excellent tutorials&lt;/a&gt;, as &lt;a href=&#34;http://hexdocs.pm/phoenix/Phoenix.html&#34;&gt;well as documentation&lt;/a&gt;. Naming can be a bit confusing, but when you&amp;rsquo;re used to the gem names in the Ruby ecosystem, my best bet is that you can get used to it.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s do it:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;mix phonix.new kitteh &amp;amp;&amp;amp; cd kitteh
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The project will do the following:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;Let the user upload a picture of a cat&lt;/li&gt;
+&lt;li&gt;Present the user with a short, descriptive URL that they can share and that stays fixed forever&amp;trade;&lt;/li&gt;
+&lt;li&gt;Provide modifiers to the url to scale the image (&lt;code&gt;Tiny&lt;/code&gt;, &lt;code&gt;Large&lt;/code&gt;, &lt;code&gt;Monstrous&lt;/code&gt;), being scaled to (&lt;code&gt;90x90&lt;/code&gt;, &lt;code&gt;300x300&lt;/code&gt;, &lt;code&gt;600x600&lt;/code&gt;) - yes, quadratic.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;So, in practise, this should look as follows:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;User comes to url, uploads an image and get&amp;rsquo;s redirected to &lt;code&gt;/CuteDomesticSavannahKitty&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;User can now use &lt;code&gt;/TinyCuteDomesticSavannahKitty&lt;/code&gt;, &lt;code&gt;/LargeCuteDomesticSavannahKitty&lt;/code&gt; and &lt;code&gt;/MonstrousCuteDomesticSavannahKitty&lt;/code&gt; to get the resized versions as well.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;&lt;strong&gt;Please note&lt;/strong&gt; that I am intentionally - and shamelessly - stealing the URL naming strategy from &lt;a href=&#34;https://gfycat.com/&#34;&gt;gfycat&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;The project should work as a tech demo to provide and explain the following components:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;the user frontend (web application)&lt;/li&gt;
+&lt;li&gt;data storage for images and their properties&lt;/li&gt;
+&lt;li&gt;serving images in a somewhat efficient way&lt;/li&gt;
+&lt;li&gt;a queue solution with job workers&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;The project can be grabbed from &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix&#34;&gt;its repository&lt;/a&gt; if you are interested.&lt;/p&gt;
+
+&lt;p&gt;Long story short: We&amp;rsquo;re (probably) going to use these containers:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;PostgreSQL for database (one for postgres, one for persitant storage)&lt;/li&gt;
+&lt;li&gt;Web Container running our Phoenix application&lt;/li&gt;
+&lt;li&gt;nginx for serving static assets and uploaded images&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;a name=&#34;continuing&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;continuing:7ae9b8d0f921bacfe0c6da25116272e8&#34;&gt;Continuing&lt;/h2&gt;
+
+&lt;p&gt;&lt;a href=&#34;https://floriank.github.io/post/using-phoenix-with-docker-part-2-implementation/&#34;&gt;In the next part&lt;/a&gt;, we&amp;rsquo;ll look into the application stack and discuss Phoenix a bit more in depth. If you are more impatient, consider &lt;a href=&#34;https://floriank.github.io/post/using-phoenix-with-docker-part-3-containerization/&#34;&gt;skipping directly to part 3&lt;/a&gt; to see how the &lt;code&gt;Dockerfile&lt;/code&gt;s of our components look like and what the &lt;code&gt;docker compose&lt;/code&gt; process will be. Or if it even works.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Working around timing issues in docker compose</title>
