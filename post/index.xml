@@ -727,7 +727,7 @@ node_modules/
 
 &lt;p&gt;Let&amp;rsquo;s fall back to the already generated &lt;code&gt;PageController&lt;/code&gt;. It already has an action &lt;code&gt;index&lt;/code&gt; ready to use.&lt;/p&gt;
 
-&lt;p&gt;At the moment it renders a file called &lt;code&gt;index.html.eex&lt;/code&gt; (&lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/blob/lets-go/web/templates/page/index.html.eex&#34;&gt;link for the lazy&lt;/a&gt;). It constitutes a demo partial that together with the &lt;code&gt;app.html.eex&lt;/code&gt; (&lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/blob/lets-go/web/templates/layout/app.html.eex&#34;&gt;this one here&lt;/a&gt;) forms a complete webpage at the &lt;code&gt;/&lt;/code&gt; route.&lt;/p&gt;
+&lt;p&gt;At the moment it renders a file called &lt;code&gt;index.html.eex&lt;/code&gt; (&lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/blob/01-lets-go/web/templates/page/index.html.eex&#34;&gt;link for the lazy&lt;/a&gt;). It constitutes a demo partial that together with the &lt;code&gt;app.html.eex&lt;/code&gt; (&lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/blob/01-lets-go/web/templates/layout/app.html.eex&#34;&gt;this one here&lt;/a&gt;) forms a complete webpage at the &lt;code&gt;/&lt;/code&gt; route.&lt;/p&gt;
 
 &lt;p&gt;We can look at it on the locally running instance at &lt;a href=&#34;http://localhost:4000&#34;&gt;localhost&lt;/a&gt; by executing&lt;/p&gt;
 
