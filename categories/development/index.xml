@@ -107,7 +107,7 @@ Cannot locate specified Dockerfile: Dockerfile
 
 &lt;h2 id=&#34;kitteh-dockerfile:8058a1d8ca608171d45c42d3c59fef01&#34;&gt;Kitteh Dockerfile&lt;/h2&gt;
 
-&lt;p&gt;Remmembering the &lt;a href=&#34;#todo&#34;&gt;section about resizing in part 2&lt;/a&gt; earlier, we know that we have at least the dependency of ImageMagick besides the actual Erlang VM and OTP to provide.&lt;/p&gt;
+&lt;p&gt;Remmembering the section about resizing in part 2 earlier, we know that we have ImageMagick as a dependency besides the actual Erlang VM and OTP to provide.&lt;/p&gt;
 
 &lt;p&gt;What do we have to ensure that our whole system works? Here is a checklist:&lt;/p&gt;
 
