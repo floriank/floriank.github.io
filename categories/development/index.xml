@@ -1148,7 +1148,7 @@ end
 
 &lt;h2 id=&#34;project-kitteh:7ae9b8d0f921bacfe0c6da25116272e8&#34;&gt;Project Kitteh&lt;/h2&gt;
 
-&lt;p&gt;So, let us prepare something cat related to containerize and deply somewhere.&lt;/p&gt;
+&lt;p&gt;So, let us prepare something cat related to containerize and deploy somewhere.&lt;/p&gt;
 
 &lt;p&gt;&lt;strong&gt;Note&lt;/strong&gt;: If you have not worked with Phoenix before, there are &lt;a href=&#34;https://blog.codecentric.de/en/2016/01/elixir-phoenix-couchdb-introduction/&#34;&gt;some excellent tutorials&lt;/a&gt;, as &lt;a href=&#34;http://hexdocs.pm/phoenix/Phoenix.html&#34;&gt;well as documentation&lt;/a&gt;. Naming can be a bit confusing, but when you&amp;rsquo;re used to the gem names in the Ruby ecosystem, my best bet is that you can get used to it.&lt;/p&gt;
 
