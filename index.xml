@@ -984,7 +984,7 @@ end
 
 &lt;h3 id=&#34;genserver:7debb73c6a3fd6f5aa2c2da8cbce28e8&#34;&gt;GenServer&lt;/h3&gt;
 
-&lt;p&gt;In a (newer) Rails environment, we could utilize anything that fulfills the interface of [ActiveJob](&lt;a href=&#34;http://edgeguides.rubyonrails.org/active_job_basics.html&#34;&gt;http://edgeguides.rubyonrails.org/active_job_basics.html&lt;/a&gt;, like an adapter to &lt;a href=&#34;http://sidekiq.org/&#34;&gt;Sidekiq&lt;/a&gt; or the &lt;code&gt;delayed_job&lt;/code&gt; &lt;a href=&#34;https://github.com/collectiveidea/delayed_job&#34;&gt;gem&lt;/a&gt; gem. We basically spin up a second OS process to generate the image, regardless of the solution.&lt;/p&gt;
+&lt;p&gt;In a (newer) Rails environment, we could utilize anything that fulfills the interface of &lt;a href=&#34;http://edgeguides.rubyonrails.org/active_job_basics.html&#34;&gt;ActiveJob&lt;/a&gt;, like an adapter to &lt;a href=&#34;http://sidekiq.org/&#34;&gt;Sidekiq&lt;/a&gt; or the &lt;code&gt;delayed_job&lt;/code&gt; &lt;a href=&#34;https://github.com/collectiveidea/delayed_job&#34;&gt;gem&lt;/a&gt; gem. We basically spin up a second OS process to generate the image, regardless of the solution.&lt;/p&gt;
 
 &lt;p&gt;Not an option here though. There are some solutions to queues and background jobs, but we are on the Erlang VM anyway, so we can utilize the technology available to us. After all, BEAM processes are cheap and lightweight.&lt;/p&gt;
 
