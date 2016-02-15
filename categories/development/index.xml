@@ -1162,7 +1162,7 @@ end
 &lt;ol&gt;
 &lt;li&gt;Let the user upload a picture of a cat&lt;/li&gt;
 &lt;li&gt;Present the user with a short, descriptive URL that they can share and that stays fixed forever&amp;trade;&lt;/li&gt;
-&lt;li&gt;Provide modifiers to the url to scale the image (&lt;code&gt;Tiny&lt;/code&gt;, &lt;code&gt;Large&lt;/code&gt;, &lt;code&gt;Monstrous&lt;/code&gt;), being scaled to (&lt;code&gt;90x90&lt;/code&gt;, &lt;code&gt;300x300&lt;/code&gt;, &lt;code&gt;600x600&lt;/code&gt;) - yes, quadratic.&lt;/li&gt;
+&lt;li&gt;Provide modifiers to the url to scale the image (&lt;code&gt;Tiny&lt;/code&gt;, &lt;code&gt;Large&lt;/code&gt;, &lt;code&gt;Monstrous&lt;/code&gt;), being scaled to a specific width&lt;/li&gt;
 &lt;/ol&gt;
 
 &lt;p&gt;So, in practise, this should look as follows:&lt;/p&gt;
