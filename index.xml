@@ -1180,7 +1180,7 @@ end
 &lt;li&gt;the user frontend (web application)&lt;/li&gt;
 &lt;li&gt;data storage for images and their properties&lt;/li&gt;
 &lt;li&gt;serving images in a somewhat efficient way&lt;/li&gt;
-&lt;li&gt;a queue solution with job workers&lt;/li&gt;
+&lt;li&gt;a queue solution with job workers (maybe &amp;hellip;?)&lt;/li&gt;
 &lt;/ul&gt;
 
 &lt;p&gt;The project can be grabbed from &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix&#34;&gt;its repository&lt;/a&gt; if you are interested.&lt;/p&gt;
