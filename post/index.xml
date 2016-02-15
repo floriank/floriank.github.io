@@ -1039,11 +1039,11 @@ end
 end
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;This should create all the resized versions. We can also utilize the builtin &lt;code&gt;Mogrify.copy&lt;/code&gt; function to skip manual copying as we did for the initial image. We end up with returning so params we can use to create another changeset and insert everything. neat, the rest of the system should now work for the resized images as well.&lt;/p&gt;
+&lt;p&gt;This should create all the resized versions. We can also utilize the builtin &lt;code&gt;Mogrify.copy&lt;/code&gt; function to skip manual copying as we did for the initial image. We end up with returning params we can use to create another changeset and insert everything. The rest of the system should now work for the resized images as well.&lt;/p&gt;
 
 &lt;p&gt;&lt;strong&gt;Note&lt;/strong&gt;: Somewhere around this point I noticed &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/commit/b7724faae9725e127f33734bcfaf2eb0ed79a101#diff-8c237d3166e777cbb3d401efc40b1c62R19&#34;&gt;a screw up in the router&lt;/a&gt; as matching order was off. This lead to a redirect to &lt;code&gt;/&lt;/code&gt; after the initial image had been created.&lt;/p&gt;
 
-&lt;p&gt;At this point, our image uploader should be feature complete. Altough being the duct-tape ghetto version it now is, it should provide a good bassis to play around with in the next part.&lt;/p&gt;
+&lt;p&gt;At this point, our image uploader should be feature complete. Altough being the duct-tape ghetto version it now is, it should provide a good basis to play around with in the next part.&lt;/p&gt;
 
 &lt;p&gt;If this is all the same to you and you could not care less about how the images are generated and stored exactly, check out the tag &lt;code&gt;05-resizing-cats&lt;/code&gt; &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/tree/05-resizing-cats&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;
 
