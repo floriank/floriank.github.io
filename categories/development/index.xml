@@ -988,7 +988,7 @@ end
 
 &lt;p&gt;Not an option here though. There are some solutions to queues and background jobs, but we are on the Erlang VM anyway, so we can utilize the technology available to us. After all, BEAM processes are cheap and lightweight.&lt;/p&gt;
 
-&lt;p&gt;&lt;a href=&#34;http://elixir-lang.org/getting-started/mix-otp/genserver.html&#34;&gt;GenServer&lt;/a&gt; might be the answer here. But actually having a long running process in the background that we can use as a service might be overkill here.&lt;/p&gt;
+&lt;p&gt;&lt;a href=&#34;http://elixir-lang.org/getting-started/mix-otp/genserver.html&#34;&gt;GenServer&lt;/a&gt; might be the answer. But actually having a long running process in the background that we can use as a service might be overkill here.&lt;/p&gt;
 
 &lt;p&gt;Let&amp;rsquo;s use &lt;code&gt;Task&lt;/code&gt; instead. &lt;code&gt;Task&lt;/code&gt; is a wrapper around Elixirs &lt;code&gt;spawn&lt;/code&gt; function and can be used for a &lt;a href=&#34;http://elixir-lang.org/docs/v1.1/elixir/Task.html&#34;&gt;multitude of things&lt;/a&gt; that are actually more advanced than we do right here, right now.&lt;/p&gt;
 
