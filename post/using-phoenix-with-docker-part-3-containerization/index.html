@@ -123,6 +123,7 @@
 <ul>
 <li><a href="#cleaning-up">Cleaning up</a></li>
 </ul></li>
+<li><a href="#one-more-thing">One more thing</a></li>
 <li><a href="#conclusion">Conclusion</a></li>
 </ul>
 
@@ -631,6 +632,12 @@ node_modules/
 <p>Finally, our main attention should probably also focus on removing items from the codebase in the web container that we do not need - mainly the actual codebase, as Elixir compiles to BEAM code and we would only need that. Just for comparison, we are talking about 18MB in the case of kitteh.</p>
 
 <p>It depends on how much convenience you want - ultimately, reducing tha base image size should be the <strong>first</strong> goal in my opinion.</p>
+
+<p><a name="one-more-thing"></a></p>
+
+<h2 id="one-more-thing:8058a1d8ca608171d45c42d3c59fef01">One more thing</h2>
+
+<p>We could have also used <a href="https://github.com/bitwalker/exrm">Exrm</a> to bundle and prepare a release into a container. I will (probably) explore this in a later entry.</p>
 
 <p><a name="conclusion"></a></p>
 
