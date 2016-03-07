@@ -6,8 +6,287 @@
     <description>Recent content on Notes of an awful developer</description>
     <generator>Hugo -- gohugo.io</generator>
     <copyright>(c) 2016 Florian Kraft</copyright>
-    <lastBuildDate>Mon, 15 Feb 2016 15:47:39 +0100</lastBuildDate>
+    <lastBuildDate>Mon, 07 Mar 2016 12:28:34 +0100</lastBuildDate>
     <atom:link href="https://floriank.github.io/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Using Phoenix with docker, Addendum: Exrm</title>
+      <link>https://floriank.github.io/post/using-phoenix-with-docker-addendum-exrm/</link>
+      <pubDate>Mon, 07 Mar 2016 12:28:34 +0100</pubDate>
+      
+      <guid>https://floriank.github.io/post/using-phoenix-with-docker-addendum-exrm/</guid>
+      <description>
+
+&lt;p&gt;&lt;em&gt;This is an addendum to a three part series: &lt;a href=&#34;https://floriank.github.io/post/using-phoenix-with-docker-part-1-introduction/&#34;&gt;Part 1&lt;/a&gt; - &lt;a href=&#34;https://floriank.github.io/post/using-phoenix-with-docker-part-2-implementation/&#34;&gt;Part 2&lt;/a&gt; - &lt;a href=&#34;No page found with path or logical name &#34;using-phoenix-with-docker-part-3-containerization&#34;.
+&#34;&gt;Part 3&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;
+
+&lt;h1 id=&#34;contents:0f704014dcbb27d9c18813e012e2f063&#34;&gt;Contents&lt;/h1&gt;
+
+&lt;!-- MarkdownTOC --&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;#bad-ideas&#34;&gt;Bad ideas&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#exrm&#34;&gt;Exrm&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#using-exrm-with-kitteh&#34;&gt;Using Exrm with Kitteh&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#building-the-docker-images---once-more&#34;&gt;Building the docker image(s) - once more.&lt;/a&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&#34;#the-agony-with-build-environments&#34;&gt;The agony with build environments&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#results&#34;&gt;Results!&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#assets&#34;&gt;Assets&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#wait-migrations&#34;&gt;Wait! Migrations!&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#the-problem-with-mixenv&#34;&gt;The problem with Mix.env&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#so-were-going-to-ignore-imagemagick&#34;&gt;So, we&amp;rsquo;re going to ignore ImageMagick?&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#conclusion&#34;&gt;Conclusion&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;!-- /MarkdownTOC --&gt;
+
+&lt;p&gt;&lt;a name=&#34;bad-ideas&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;bad-ideas:0f704014dcbb27d9c18813e012e2f063&#34;&gt;Bad ideas&lt;/h2&gt;
+
+&lt;p&gt;I have had some bad ideas in the past - building a container out of a Phoenix application like building it out of a Rails application wasn&amp;rsquo;t probably the best idea ever.&lt;/p&gt;
+
+&lt;p&gt;After all, you &lt;em&gt;never&lt;/em&gt; ship your source code into production when using a compiled language.&lt;/p&gt;
+
+&lt;p&gt;Regardless, I worked with &lt;a href=&#34;http://golang.org&#34;&gt;Golang&lt;/a&gt; before - the ability to build a self-contained, static binary is great there. And super useful, if you want to use the &lt;code&gt;scratch&lt;/code&gt; container that &lt;code&gt;docker&lt;/code&gt; offers to build a very minimal image that does not exceed, let&amp;rsquo;s say, 15MB.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;exrm&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;exrm:0f704014dcbb27d9c18813e012e2f063&#34;&gt;Exrm&lt;/h2&gt;
+
+&lt;p&gt;Elixir offers the possibility of using a library called &lt;a href=&#34;https://github.com/bitwalker/exrm&#34;&gt;Exrm&lt;/a&gt;, the Elixir release manager. It has the self proclaimed goal to make Elixir deployments very easy and delightful to work with.&lt;/p&gt;
+
+&lt;p&gt;What happens is that Exrm will build a self-contained artifact, which can be deployed more easily and integrates with a lot of features that Erlang already provides, like versioning or hot deployments.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;using-exrm-with-kitteh&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;using-exrm-with-kitteh:0f704014dcbb27d9c18813e012e2f063&#34;&gt;Using Exrm with Kitteh&lt;/h2&gt;
+
+&lt;p&gt;Let&amp;rsquo;s add it as a dependency:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-ruby&#34;&gt;# /mix.exs
+# [...]
+defp deps do
+  [{:phoenix, &amp;quot;~&amp;gt; 1.0.2&amp;quot;},
+    {:phoenix_ecto, &amp;quot;~&amp;gt; 1.1&amp;quot;},
+    {:postgrex, &amp;quot;&amp;gt;= 0.0.0&amp;quot;},
+    {:phoenix_html, &amp;quot;~&amp;gt; 2.1&amp;quot;},
+    {:phoenix_live_reload, &amp;quot;~&amp;gt; 1.0&amp;quot;, only: :dev},
+    {:cowboy, &amp;quot;~&amp;gt; 1.0&amp;quot;},
+    {:mogrify, &amp;quot;~&amp;gt; 0.2&amp;quot;},
+    {:exrm, &amp;quot;~&amp;gt; 1.0&amp;quot;}]
+end
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;and run &lt;code&gt;mix deps.get&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Since this will be a production release, we need to tweak the &lt;code&gt;prod.exs&lt;/code&gt; configuration a bit:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-ruby&#34;&gt;# /config/prod.exs
+# [...]
+config :phoenix, :serve_endpoints, true
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Note that for testing purposes I also changed the hostname to &lt;code&gt;localhost&lt;/code&gt; throughout the configuration.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;building-the-docker-images---once-more&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;building-the-docker-image-s-once-more:0f704014dcbb27d9c18813e012e2f063&#34;&gt;Building the docker image(s) - once more.&lt;/h2&gt;
+
+&lt;p&gt;Ideally, we can now copy over the release into our docker container instead of copying everything over and then compiling it inside.&lt;/p&gt;
+
+&lt;p&gt;But wait - this also means that we now need a build environment to build our releases, compile our assets, etc. For simplicity, I am going to use the host machine (my laptop) as the build environment.&lt;/p&gt;
+
+&lt;p&gt;To reduce the overhead in the docker file, I introduced a &lt;code&gt;build-docker.sh&lt;/code&gt; file that builds the web application image, as well as the attached images.&lt;/p&gt;
+
+&lt;p&gt;The &lt;code&gt;docker-compose.yml&lt;/code&gt; will then pick up the images by the tags generated by this build file.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;the-agony-with-build-environments&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3 id=&#34;the-agony-with-build-environments:0f704014dcbb27d9c18813e012e2f063&#34;&gt;The agony with build environments&lt;/h3&gt;
+
+&lt;p&gt;To keep the image contents to a minimum I decided to use the &lt;code&gt;msaraiva/alpine-erlang&lt;/code&gt; image as a base and work from that. There is an excellent description on how to use this image as a base for a Phoenix application &lt;a href=&#34;https://github.com/msaraiva/alpine-erlang#phoenix-exrm&#34;&gt;in the repository for the image&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;One problem I ran into was that I use Ubuntu with the latest Erlang environment (18.2) while the current base image uses &lt;code&gt;erlang:18.1&lt;/code&gt; as it&amp;rsquo;s environment, leading to sideeffects, like:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;{&amp;quot;init terminating in do_boot&amp;quot;,{&#39;cannot load&#39;,error_handler,get_files}}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;when trying to run the created image.&lt;/p&gt;
+
+&lt;p&gt;Using &lt;code&gt;alpine:edge&lt;/code&gt; resolves the problem.&lt;/p&gt;
+
+&lt;p&gt;Unfortunately, this is a mojor disadvantage in the build chain at the moment. The target container must provide the same environment as the build system provides, otherwise there will be &lt;em&gt;no&lt;/em&gt; guarantee of this working.&lt;/p&gt;
+
+&lt;p&gt;Here is the full &lt;code&gt;Dockerfile&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-Dockerfile&#34;&gt;FROM alpine:edge
+
+RUN apk --update add erlang erlang-sasl erlang-crypto erlang-syntax-tools &amp;amp;&amp;amp; rm -rf /var/cache/apk/*
+
+ENV APP_NAME kitteh
+ENV APP_VERSION &amp;quot;0.0.1&amp;quot;
+ENV PORT 4000
+
+RUN mkdir -p /$APP_NAME
+ADD rel/$APP_NAME/bin /$APP_NAME/bin
+ADD rel/$APP_NAME/lib /$APP_NAME/lib
+ADD rel/$APP_NAME/releases/start_erl.data                 /$APP_NAME/releases/start_erl.data
+ADD rel/$APP_NAME/releases/$APP_VERSION/$APP_NAME.sh      /$APP_NAME/releases/$APP_VERSION/$APP_NAME.sh
+ADD rel/$APP_NAME/releases/$APP_VERSION/$APP_NAME.boot    /$APP_NAME/releases/$APP_VERSION/$APP_NAME.boot
+ADD rel/$APP_NAME/releases/$APP_VERSION/$APP_NAME.rel     /$APP_NAME/releases/$APP_VERSION/$APP_NAME.rel
+ADD rel/$APP_NAME/releases/$APP_VERSION/$APP_NAME.script  /$APP_NAME/releases/$APP_VERSION/$APP_NAME.script
+ADD rel/$APP_NAME/releases/$APP_VERSION/start.boot        /$APP_NAME/releases/$APP_VERSION/start.boot
+ADD rel/$APP_NAME/releases/$APP_VERSION/sys.config        /$APP_NAME/releases/$APP_VERSION/sys.config
+ADD rel/$APP_NAME/releases/$APP_VERSION/vm.args           /$APP_NAME/releases/$APP_VERSION/vm.args
+
+EXPOSE $PORT
+
+CMD trap exit TERM; /$APP_NAME/bin/$APP_NAME foreground &amp;amp; wait
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;&lt;a name=&#34;results&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3 id=&#34;results:0f704014dcbb27d9c18813e012e2f063&#34;&gt;Results!&lt;/h3&gt;
+
+&lt;p&gt;However, using the same versions everywhere should result in a new docker image for our application:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;docker images | grep kitteh
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;should yield:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;kitteh/prod 0.0.1 a9c2a80abfe1 35 seconds ago 28 MB
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Nice, that is way better when it comes down to size for the image.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;assets&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;assets:0f704014dcbb27d9c18813e012e2f063&#34;&gt;Assets&lt;/h2&gt;
+
+&lt;p&gt;Since the web application image now completely ignores any asset containers, we need to add these in the build process, more specifically, in the &lt;code&gt;build-docker.sh&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;# [...]
+# assets
+MIX_ENV=prod mix phoenix.digest
+docker build -f Dockerfile.assets -t kitteh/assets:0.0.1 .
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This will create another image called &lt;code&gt;kitteh/assets&lt;/code&gt;. While we&amp;rsquo;re at it, let&amp;rsquo;s change the &lt;code&gt;docker-compose.yml&lt;/code&gt; to make use of the images, which incidentally would allow us to use the version 1 of the YAML-syntax again, if we wanted to.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;wait-migrations&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;wait-migrations:0f704014dcbb27d9c18813e012e2f063&#34;&gt;Wait! Migrations!&lt;/h2&gt;
+
+&lt;p&gt;A downside of the compiled approach we&amp;rsquo;re now taking is the fact that migrations are no longer part of the &lt;code&gt;kitteh/web&lt;/code&gt; image, as the &lt;code&gt;priv/repo/migrations&lt;/code&gt; folder gets dismissed at build (not really, but &lt;code&gt;Mix&lt;/code&gt; is no longer available to us).&lt;/p&gt;
+
+&lt;p&gt;One solution to this comes from a &lt;a href=&#34;https://github.com/bitwalker/exrm/issues/67&#34;&gt;discussion in the exrm repository&lt;/a&gt;: Running the migrations whenever the server comes up using the &lt;code&gt;Ecto.Migrator&lt;/code&gt; API directly.&lt;/p&gt;
+
+&lt;p&gt;A second option I found was proposed by Github user &lt;a href=&#34;https://github.com/MSch&#34;&gt;@mschu&lt;/a&gt; - using an Exrm-Plugin to generate an &lt;code&gt;escript&lt;/code&gt; file that would in turn load an Elixir module to run the migrations - again, via &lt;code&gt;Ecto.Migrator&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;A demo for the second solution &lt;a href=&#34;https://gist.github.com/MSch/9cfc185e24e2f3509650&#34;&gt;can be found as a gist here&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;However, after toying with the second option I found that the first one would be the one to go for (I couldn&amp;rsquo;t get the escript solution to run).&lt;/p&gt;
+
+&lt;p&gt;The argumentation for the second solution is that migrations are &lt;a href=&#34;https://www.wikiwand.com/en/Idempotence&#34;&gt;idempotent&lt;/a&gt; anyway and can always be run on startup.&lt;/p&gt;
+
+&lt;p&gt;I disagree -  running the migrations should be a separate task. You may want to control the point of time precisely and not just migrate upon every restart. But for now it should suffice.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;the-problem-with-mixenv&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;the-problem-with-mix-env:0f704014dcbb27d9c18813e012e2f063&#34;&gt;The problem with Mix.env&lt;/h2&gt;
+
+&lt;p&gt;We&amp;rsquo;re not using &lt;code&gt;Mix.env&lt;/code&gt; anymore in production, so shenanigans like:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-ruby&#34;&gt;Mix.env == :prod
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;will now fail. Luckily, we can check on the environment directly:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-ruby&#34;&gt;System.get_env(&amp;quot;MIX_ENV&amp;quot;) == &amp;quot;prod&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;It&amp;rsquo;s a subtle thing, but running the application will fail because of that.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;so-were-going-to-ignore-imagemagick&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;so-we-re-going-to-ignore-imagemagick:0f704014dcbb27d9c18813e012e2f063&#34;&gt;So, we&amp;rsquo;re going to ignore ImageMagick?&lt;/h2&gt;
+
+&lt;p&gt;By now, looking at &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/commit/04ecae10051833fb2acbc05a0daae964042087a5&#34;&gt;the latest commit&lt;/a&gt;, the application should run again.&lt;/p&gt;
+
+&lt;p&gt;We will run into a subtle crash in the background, when we&amp;rsquo;re trying to upload a picture anyway:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;web_1     | =CRASH REPORT==== 7-Mar-2016::16:21:31 ===
+web_1     |   crasher:
+web_1     |     initial call: Elixir.Kitteh.PageController:-create_sizes/1-fun-0-/0
+web_1     |     pid: &amp;lt;0.1145.0&amp;gt;
+web_1     |     registered_name: []
+web_1     |     exception exit: {enoent,
+web_1     |                         [{&#39;Elixir.System&#39;,cmd,
+web_1     |                              [&amp;lt;&amp;lt;&amp;quot;mogrify&amp;quot;&amp;gt;&amp;gt;,
+web_1     |                               [&amp;lt;&amp;lt;&amp;quot;-resize&amp;quot;&amp;gt;&amp;gt;,&amp;lt;&amp;lt;&amp;quot;90&amp;quot;&amp;gt;&amp;gt;,
+web_1     |                                &amp;lt;&amp;lt;&amp;quot;/tmp/177012-DaintyTanCyprus.jpeg&amp;quot;&amp;gt;&amp;gt;],
+web_1     |                               [{stderr_to_stdout,true}]],
+web_1     |                              [{file,&amp;quot;lib/system.ex&amp;quot;},{line,450}]},
+web_1     |                          {&#39;Elixir.Mogrify&#39;,resize,2,
+web_1     |                              [{file,&amp;quot;lib/mogrify.ex&amp;quot;},{line,60}]},
+web_1     |                          {&#39;Elixir.Kitteh.PageController&#39;,resize,3,
+web_1     |                              [{file,&amp;quot;web/controllers/page_controller.ex&amp;quot;},
+web_1     |                               {line,105}]},
+web_1     |                          {&#39;Elixir.Kitteh.PageController&#39;,
+web_1     |                              &#39;-create_sizes/1-fun-0-&#39;,3,
+web_1     |                              [{file,&amp;quot;web/controllers/page_controller.ex&amp;quot;},
+web_1     |                               {line,93}]},
+web_1     |                          {&#39;Elixir.Task.Supervised&#39;,do_apply,2,
+web_1     |                              [{file,&amp;quot;lib/task/supervised.ex&amp;quot;},{line,89}]},
+web_1     |                          {proc_lib,init_p_do_apply,3,
+web_1     |                              [{file,&amp;quot;proc_lib.erl&amp;quot;},{line,240}]}]}
+web_1     |       in function  &#39;Elixir.Task.Supervised&#39;:exit/4 (lib/task/supervised.ex, line 120)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Yep, no ImageMagick in the Base Image.&lt;/p&gt;
+
+&lt;p&gt;Let&amp;rsquo;s fix that:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&#34;language-Dockerfile&#34;&gt;# Dockerfile
+# [...]
+RUN apk --update add erlang erlang-sasl erlang-crypto erlang-syntax-tools imagemagick &amp;amp;&amp;amp; rm -rf /var/cache/apk/*
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;After this change, the images should be properly resized in the background again, &lt;em&gt;but&lt;/em&gt; we bloated our image to &lt;strong&gt;37MB&lt;/strong&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;a name=&#34;conclusion&#34;&gt;&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&#34;conclusion:0f704014dcbb27d9c18813e012e2f063&#34;&gt;Conclusion&lt;/h2&gt;
+
+&lt;p&gt;&lt;em&gt;If you skipped directly to my conclusion, please see the tag &lt;a href=&#34;https://github.com/floriank/kitteh-phoenix/tree/10-imagemagick-finally&#34;&gt;&lt;code&gt;10-imagemagick-finally&lt;/code&gt;&lt;/a&gt; for the codebase at the end of this article&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;So - I think we are a little bit better off with this approach:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Smaller image size for the main &lt;code&gt;web&lt;/code&gt; image&lt;/li&gt;
+&lt;li&gt;Detached build process for the images (not completely, one could move the &lt;code&gt;uploads&lt;/code&gt; nginx image over or merge it with the &lt;code&gt;assets&lt;/code&gt; image)&lt;/li&gt;
+&lt;li&gt;Ability to downgrade docker-compose if we wanted to&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;There are some downsides though:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;Running migrations is currently tied to the server directly&lt;/li&gt;
+&lt;li&gt;Configuration is not completely independent from the application - as of now, your admin needs to be able to read and write Elixir&lt;/li&gt;
+&lt;li&gt;The assets are immutable and have to be rebuilt each time, however, this allows for independent versioning for the assets&lt;/li&gt;
+&lt;li&gt;The app version is hard coded - one could extract it from &lt;code&gt;mix.exs&lt;/code&gt;, if ones beard is long enough&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;While looking at this process in general, I must also say that running Elixir in docker containers does &lt;em&gt;not&lt;/em&gt; work towards the microservice approach, the images &lt;em&gt;all&lt;/em&gt; need to have the full run time environment and it might be better to use the abstraction for applications and processes that the Erlang VM provides directly.&lt;/p&gt;
+
+&lt;p&gt;If you find yourself having to integrate a service based on Elixir or Erlang in an existing environment, this might be an option for you after all.&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Using Phoenix with docker, Part 3: Containerization</title>

@@ -3,8 +3,13 @@
   
   <url>
     <loc>https://floriank.github.io/</loc>
-    <lastmod>2016-02-15T15:47:39+01:00</lastmod>
+    <lastmod>2016-03-07T12:28:34+01:00</lastmod>
     <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>https://floriank.github.io/post/using-phoenix-with-docker-addendum-exrm/</loc>
+    <lastmod>2016-03-07T12:28:34+01:00</lastmod>
   </url>
   
   <url>

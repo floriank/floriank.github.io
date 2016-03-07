@@ -1,0 +1,442 @@
+<html lang="en">
+<head>
+
+  
+  <meta charset="utf-8">
+  <title>Using Phoenix with docker, Addendum: Exrm</title>
+  <meta name="description" content="Using Phoenix with docker, Addendum: Exrm">
+  <meta name="author" content="Florian Kraft">
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="https://floriank.github.io/css/fonts.css">
+  
+  
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
+  
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
+
+  <link rel="stylesheet" href="https://floriank.github.io/css/custom.css">
+
+  
+  
+  <link rel="stylesheet" href="https://floriank.github.io/highlight/styles/default.css">
+  
+  <script src="https://floriank.github.io/highlight/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+</head>
+<body>
+
+
+<div class="header pure-g">
+    <div class="pure-u-1-24 pure-u-md-5-24"></div>
+    <div class="pure-u-11-12 pure-u-md-5-8">
+        <div class="desktop pure-menu pure-menu-horizontal nav-menu">
+            
+            <a href="https://floriank.github.io/" class="site-title pure-menu-heading">Notes of an awful developer</a>
+            <ul class="pure-menu-list">
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/categories/development" class="pure-menu-link">Development</a>
+                </li>
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/about/" class="pure-menu-link">About</a>
+                </li>
+            </ul>
+        </div>
+        <div class="mobile pure-menu nav-menu">
+            <a href="https://floriank.github.io/" class="pure-menu-heading" id="toggle-home">Notes of an awful developer</a>
+            <a href="#" id="toggle-btn">&#9776;</a>
+            <ul class="pure-menu-list" id="toggle-content" style="display:none;">
+                
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/categories/development" class="pure-menu-link">Development</a>
+                </li>
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/about" class="pure-menu-link">About</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="pure-u-1-24 pure-u-md-1-6"></div>
+</div>
+
+
+<div class="pure-g">
+    <div class="pure-u-1-24 pure-u-md-5-24"></div>
+	<div class="pure-u-11-12 pure-u-md-5-8">
+        <div class="post">
+
+            <div class="post-title">
+                <p class="footnote">
+                    <time class="">2016-03-07</time>
+		            
+                    
+                    |
+                    
+                    
+
+                    
+                    categories:<a href="https://floriank.github.io/categories/development">development</a> 
+                    
+
+                    
+                </p>
+                <h1>Using Phoenix with docker, Addendum: Exrm</h1>
+            </div>
+
+            <div class="post-content">
+                
+
+<p><em>This is an addendum to a three part series: <a href="https://floriank.github.io/post/using-phoenix-with-docker-part-1-introduction/">Part 1</a> - <a href="https://floriank.github.io/post/using-phoenix-with-docker-part-2-implementation/">Part 2</a> - <a href="No page found with path or logical name "using-phoenix-with-docker-part-3-containerization".
+">Part 3</a></em></p>
+
+<h1 id="contents:0f704014dcbb27d9c18813e012e2f063">Contents</h1>
+
+<!-- MarkdownTOC -->
+
+<ul>
+<li><a href="#bad-ideas">Bad ideas</a></li>
+<li><a href="#exrm">Exrm</a></li>
+<li><a href="#using-exrm-with-kitteh">Using Exrm with Kitteh</a></li>
+<li><a href="#building-the-docker-images---once-more">Building the docker image(s) - once more.</a>
+
+<ul>
+<li><a href="#the-agony-with-build-environments">The agony with build environments</a></li>
+<li><a href="#results">Results!</a></li>
+</ul></li>
+<li><a href="#assets">Assets</a></li>
+<li><a href="#wait-migrations">Wait! Migrations!</a></li>
+<li><a href="#the-problem-with-mixenv">The problem with Mix.env</a></li>
+<li><a href="#so-were-going-to-ignore-imagemagick">So, we&rsquo;re going to ignore ImageMagick?</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+
+<!-- /MarkdownTOC -->
+
+<p><a name="bad-ideas"></a></p>
+
+<h2 id="bad-ideas:0f704014dcbb27d9c18813e012e2f063">Bad ideas</h2>
+
+<p>I have had some bad ideas in the past - building a container out of a Phoenix application like building it out of a Rails application wasn&rsquo;t probably the best idea ever.</p>
+
+<p>After all, you <em>never</em> ship your source code into production when using a compiled language.</p>
+
+<p>Regardless, I worked with <a href="http://golang.org">Golang</a> before - the ability to build a self-contained, static binary is great there. And super useful, if you want to use the <code>scratch</code> container that <code>docker</code> offers to build a very minimal image that does not exceed, let&rsquo;s say, 15MB.</p>
+
+<p><a name="exrm"></a></p>
+
+<h2 id="exrm:0f704014dcbb27d9c18813e012e2f063">Exrm</h2>
+
+<p>Elixir offers the possibility of using a library called <a href="https://github.com/bitwalker/exrm">Exrm</a>, the Elixir release manager. It has the self proclaimed goal to make Elixir deployments very easy and delightful to work with.</p>
+
+<p>What happens is that Exrm will build a self-contained artifact, which can be deployed more easily and integrates with a lot of features that Erlang already provides, like versioning or hot deployments.</p>
+
+<p><a name="using-exrm-with-kitteh"></a></p>
+
+<h2 id="using-exrm-with-kitteh:0f704014dcbb27d9c18813e012e2f063">Using Exrm with Kitteh</h2>
+
+<p>Let&rsquo;s add it as a dependency:</p>
+
+<pre><code class="language-ruby"># /mix.exs
+# [...]
+defp deps do
+  [{:phoenix, &quot;~&gt; 1.0.2&quot;},
+    {:phoenix_ecto, &quot;~&gt; 1.1&quot;},
+    {:postgrex, &quot;&gt;= 0.0.0&quot;},
+    {:phoenix_html, &quot;~&gt; 2.1&quot;},
+    {:phoenix_live_reload, &quot;~&gt; 1.0&quot;, only: :dev},
+    {:cowboy, &quot;~&gt; 1.0&quot;},
+    {:mogrify, &quot;~&gt; 0.2&quot;},
+    {:exrm, &quot;~&gt; 1.0&quot;}]
+end
+</code></pre>
+
+<p>and run <code>mix deps.get</code>.</p>
+
+<p>Since this will be a production release, we need to tweak the <code>prod.exs</code> configuration a bit:</p>
+
+<pre><code class="language-ruby"># /config/prod.exs
+# [...]
+config :phoenix, :serve_endpoints, true
+</code></pre>
+
+<p>Note that for testing purposes I also changed the hostname to <code>localhost</code> throughout the configuration.</p>
+
+<p><a name="building-the-docker-images---once-more"></a></p>
+
+<h2 id="building-the-docker-image-s-once-more:0f704014dcbb27d9c18813e012e2f063">Building the docker image(s) - once more.</h2>
+
+<p>Ideally, we can now copy over the release into our docker container instead of copying everything over and then compiling it inside.</p>
+
+<p>But wait - this also means that we now need a build environment to build our releases, compile our assets, etc. For simplicity, I am going to use the host machine (my laptop) as the build environment.</p>
+
+<p>To reduce the overhead in the docker file, I introduced a <code>build-docker.sh</code> file that builds the web application image, as well as the attached images.</p>
+
+<p>The <code>docker-compose.yml</code> will then pick up the images by the tags generated by this build file.</p>
+
+<p><a name="the-agony-with-build-environments"></a></p>
+
+<h3 id="the-agony-with-build-environments:0f704014dcbb27d9c18813e012e2f063">The agony with build environments</h3>
+
+<p>To keep the image contents to a minimum I decided to use the <code>msaraiva/alpine-erlang</code> image as a base and work from that. There is an excellent description on how to use this image as a base for a Phoenix application <a href="https://github.com/msaraiva/alpine-erlang#phoenix-exrm">in the repository for the image</a>.</p>
+
+<p>One problem I ran into was that I use Ubuntu with the latest Erlang environment (18.2) while the current base image uses <code>erlang:18.1</code> as it&rsquo;s environment, leading to sideeffects, like:</p>
+
+<pre><code class="language-bash">{&quot;init terminating in do_boot&quot;,{'cannot load',error_handler,get_files}}
+</code></pre>
+
+<p>when trying to run the created image.</p>
+
+<p>Using <code>alpine:edge</code> resolves the problem.</p>
+
+<p>Unfortunately, this is a mojor disadvantage in the build chain at the moment. The target container must provide the same environment as the build system provides, otherwise there will be <em>no</em> guarantee of this working.</p>
+
+<p>Here is the full <code>Dockerfile</code>:</p>
+
+<pre><code class="language-Dockerfile">FROM alpine:edge
+
+RUN apk --update add erlang erlang-sasl erlang-crypto erlang-syntax-tools &amp;&amp; rm -rf /var/cache/apk/*
+
+ENV APP_NAME kitteh
+ENV APP_VERSION &quot;0.0.1&quot;
+ENV PORT 4000
+
+RUN mkdir -p /$APP_NAME
+ADD rel/$APP_NAME/bin /$APP_NAME/bin
+ADD rel/$APP_NAME/lib /$APP_NAME/lib
+ADD rel/$APP_NAME/releases/start_erl.data                 /$APP_NAME/releases/start_erl.data
+ADD rel/$APP_NAME/releases/$APP_VERSION/$APP_NAME.sh      /$APP_NAME/releases/$APP_VERSION/$APP_NAME.sh
+ADD rel/$APP_NAME/releases/$APP_VERSION/$APP_NAME.boot    /$APP_NAME/releases/$APP_VERSION/$APP_NAME.boot
+ADD rel/$APP_NAME/releases/$APP_VERSION/$APP_NAME.rel     /$APP_NAME/releases/$APP_VERSION/$APP_NAME.rel
+ADD rel/$APP_NAME/releases/$APP_VERSION/$APP_NAME.script  /$APP_NAME/releases/$APP_VERSION/$APP_NAME.script
+ADD rel/$APP_NAME/releases/$APP_VERSION/start.boot        /$APP_NAME/releases/$APP_VERSION/start.boot
+ADD rel/$APP_NAME/releases/$APP_VERSION/sys.config        /$APP_NAME/releases/$APP_VERSION/sys.config
+ADD rel/$APP_NAME/releases/$APP_VERSION/vm.args           /$APP_NAME/releases/$APP_VERSION/vm.args
+
+EXPOSE $PORT
+
+CMD trap exit TERM; /$APP_NAME/bin/$APP_NAME foreground &amp; wait
+</code></pre>
+
+<p><a name="results"></a></p>
+
+<h3 id="results:0f704014dcbb27d9c18813e012e2f063">Results!</h3>
+
+<p>However, using the same versions everywhere should result in a new docker image for our application:</p>
+
+<pre><code class="language-bash">docker images | grep kitteh
+</code></pre>
+
+<p>should yield:</p>
+
+<pre><code class="language-bash">kitteh/prod 0.0.1 a9c2a80abfe1 35 seconds ago 28 MB
+</code></pre>
+
+<p>Nice, that is way better when it comes down to size for the image.</p>
+
+<p><a name="assets"></a></p>
+
+<h2 id="assets:0f704014dcbb27d9c18813e012e2f063">Assets</h2>
+
+<p>Since the web application image now completely ignores any asset containers, we need to add these in the build process, more specifically, in the <code>build-docker.sh</code>:</p>
+
+<pre><code class="language-bash"># [...]
+# assets
+MIX_ENV=prod mix phoenix.digest
+docker build -f Dockerfile.assets -t kitteh/assets:0.0.1 .
+</code></pre>
+
+<p>This will create another image called <code>kitteh/assets</code>. While we&rsquo;re at it, let&rsquo;s change the <code>docker-compose.yml</code> to make use of the images, which incidentally would allow us to use the version 1 of the YAML-syntax again, if we wanted to.</p>
+
+<p><a name="wait-migrations"></a></p>
+
+<h2 id="wait-migrations:0f704014dcbb27d9c18813e012e2f063">Wait! Migrations!</h2>
+
+<p>A downside of the compiled approach we&rsquo;re now taking is the fact that migrations are no longer part of the <code>kitteh/web</code> image, as the <code>priv/repo/migrations</code> folder gets dismissed at build (not really, but <code>Mix</code> is no longer available to us).</p>
+
+<p>One solution to this comes from a <a href="https://github.com/bitwalker/exrm/issues/67">discussion in the exrm repository</a>: Running the migrations whenever the server comes up using the <code>Ecto.Migrator</code> API directly.</p>
+
+<p>A second option I found was proposed by Github user <a href="https://github.com/MSch">@mschu</a> - using an Exrm-Plugin to generate an <code>escript</code> file that would in turn load an Elixir module to run the migrations - again, via <code>Ecto.Migrator</code>.</p>
+
+<p>A demo for the second solution <a href="https://gist.github.com/MSch/9cfc185e24e2f3509650">can be found as a gist here</a>.</p>
+
+<p>However, after toying with the second option I found that the first one would be the one to go for (I couldn&rsquo;t get the escript solution to run).</p>
+
+<p>The argumentation for the second solution is that migrations are <a href="https://www.wikiwand.com/en/Idempotence">idempotent</a> anyway and can always be run on startup.</p>
+
+<p>I disagree -  running the migrations should be a separate task. You may want to control the point of time precisely and not just migrate upon every restart. But for now it should suffice.</p>
+
+<p><a name="the-problem-with-mixenv"></a></p>
+
+<h2 id="the-problem-with-mix-env:0f704014dcbb27d9c18813e012e2f063">The problem with Mix.env</h2>
+
+<p>We&rsquo;re not using <code>Mix.env</code> anymore in production, so shenanigans like:</p>
+
+<pre><code class="language-ruby">Mix.env == :prod
+</code></pre>
+
+<p>will now fail. Luckily, we can check on the environment directly:</p>
+
+<pre><code class="language-ruby">System.get_env(&quot;MIX_ENV&quot;) == &quot;prod&quot;
+</code></pre>
+
+<p>It&rsquo;s a subtle thing, but running the application will fail because of that.</p>
+
+<p><a name="so-were-going-to-ignore-imagemagick"></a></p>
+
+<h2 id="so-we-re-going-to-ignore-imagemagick:0f704014dcbb27d9c18813e012e2f063">So, we&rsquo;re going to ignore ImageMagick?</h2>
+
+<p>By now, looking at <a href="https://github.com/floriank/kitteh-phoenix/commit/04ecae10051833fb2acbc05a0daae964042087a5">the latest commit</a>, the application should run again.</p>
+
+<p>We will run into a subtle crash in the background, when we&rsquo;re trying to upload a picture anyway:</p>
+
+<pre><code>web_1     | =CRASH REPORT==== 7-Mar-2016::16:21:31 ===
+web_1     |   crasher:
+web_1     |     initial call: Elixir.Kitteh.PageController:-create_sizes/1-fun-0-/0
+web_1     |     pid: &lt;0.1145.0&gt;
+web_1     |     registered_name: []
+web_1     |     exception exit: {enoent,
+web_1     |                         [{'Elixir.System',cmd,
+web_1     |                              [&lt;&lt;&quot;mogrify&quot;&gt;&gt;,
+web_1     |                               [&lt;&lt;&quot;-resize&quot;&gt;&gt;,&lt;&lt;&quot;90&quot;&gt;&gt;,
+web_1     |                                &lt;&lt;&quot;/tmp/177012-DaintyTanCyprus.jpeg&quot;&gt;&gt;],
+web_1     |                               [{stderr_to_stdout,true}]],
+web_1     |                              [{file,&quot;lib/system.ex&quot;},{line,450}]},
+web_1     |                          {'Elixir.Mogrify',resize,2,
+web_1     |                              [{file,&quot;lib/mogrify.ex&quot;},{line,60}]},
+web_1     |                          {'Elixir.Kitteh.PageController',resize,3,
+web_1     |                              [{file,&quot;web/controllers/page_controller.ex&quot;},
+web_1     |                               {line,105}]},
+web_1     |                          {'Elixir.Kitteh.PageController',
+web_1     |                              '-create_sizes/1-fun-0-',3,
+web_1     |                              [{file,&quot;web/controllers/page_controller.ex&quot;},
+web_1     |                               {line,93}]},
+web_1     |                          {'Elixir.Task.Supervised',do_apply,2,
+web_1     |                              [{file,&quot;lib/task/supervised.ex&quot;},{line,89}]},
+web_1     |                          {proc_lib,init_p_do_apply,3,
+web_1     |                              [{file,&quot;proc_lib.erl&quot;},{line,240}]}]}
+web_1     |       in function  'Elixir.Task.Supervised':exit/4 (lib/task/supervised.ex, line 120)
+</code></pre>
+
+<p>Yep, no ImageMagick in the Base Image.</p>
+
+<p>Let&rsquo;s fix that:</p>
+
+<pre><code class="language-Dockerfile"># Dockerfile
+# [...]
+RUN apk --update add erlang erlang-sasl erlang-crypto erlang-syntax-tools imagemagick &amp;&amp; rm -rf /var/cache/apk/*
+</code></pre>
+
+<p>After this change, the images should be properly resized in the background again, <em>but</em> we bloated our image to <strong>37MB</strong>.</p>
+
+<p><a name="conclusion"></a></p>
+
+<h2 id="conclusion:0f704014dcbb27d9c18813e012e2f063">Conclusion</h2>
+
+<p><em>If you skipped directly to my conclusion, please see the tag <a href="https://github.com/floriank/kitteh-phoenix/tree/10-imagemagick-finally"><code>10-imagemagick-finally</code></a> for the codebase at the end of this article</em>.</p>
+
+<p>So - I think we are a little bit better off with this approach:</p>
+
+<ul>
+<li>Smaller image size for the main <code>web</code> image</li>
+<li>Detached build process for the images (not completely, one could move the <code>uploads</code> nginx image over or merge it with the <code>assets</code> image)</li>
+<li>Ability to downgrade docker-compose if we wanted to</li>
+</ul>
+
+<p>There are some downsides though:</p>
+
+<ul>
+<li>Running migrations is currently tied to the server directly</li>
+<li>Configuration is not completely independent from the application - as of now, your admin needs to be able to read and write Elixir</li>
+<li>The assets are immutable and have to be rebuilt each time, however, this allows for independent versioning for the assets</li>
+<li>The app version is hard coded - one could extract it from <code>mix.exs</code>, if ones beard is long enough</li>
+</ul>
+
+<p>While looking at this process in general, I must also say that running Elixir in docker containers does <em>not</em> work towards the microservice approach, the images <em>all</em> need to have the full run time environment and it might be better to use the abstraction for applications and processes that the Erlang VM provides directly.</p>
+
+<p>If you find yourself having to integrate a service based on Elixir or Erlang in an existing environment, this might be an option for you after all.</p>
+
+            </div>
+        </div>
+	</div>
+    <div class="pure-u-1-24 pure-u-md-1-6"></div>
+</div>
+
+<div class="footer pure-g">
+    <div class="pure-u-1-24 pure-u-md-5-24"></div>
+    <div class="pure-u-11-12 pure-u-md-5-8">
+        <div class="pure-menu pure-menu-horizontal footer-content">
+            <ul>
+                <li class="pure-menu-heading" id="foot-name">Florian Kraft:</li>
+
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://github.com/floriank" class="pure-menu-link">GitHub</a>
+                </li>
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://www.linkedin.com/in/floriankraft" class="pure-menu-link">LinkedIn</a>
+                </li>
+                
+
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://twitter.com/carhillion" class="pure-menu-link">Twitter</a>
+                </li>
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://stackoverflow.com/users/498226/florian" class="pure-menu-link">Stack Overflow</a>
+                </li>
+                
+                <li class="pure-menu-item right">
+                  <a class="pure-menu-link" href="https://github.com/gizak/nofancy/">Theme based on the most excellent nofancy theme</a>
+                </li>
+            </ul>
+            <a href="#" class="pure-menu-heading pull-right" id="gototop-btn">↑↑</a>
+        </div>
+	  </div>
+      <div class="pure-u-1-24 pure-u-md-1-6"></div>
+</div>
+
+
+<script src="https://floriank.github.io/js/jquery.min.js" type="text/javascript"></script>
+<script src="https://floriank.github.io/js/jquery.timeago.js" type="text/javascript"></script>
+<script type="text/javascript">
+  $(function(){
+    $("time.timeago").timeago();
+  })
+  $("#toggle-btn").click(function(){
+    $("#toggle-content").toggle();
+    if($(this).html() === "☰") {
+        $(this).html("X")
+    } else {
+        $(this).html("☰")
+    }
+  });
+  $(window).resize(function(){
+    if(window.innerWidth > 768) {
+      $(".desktop").removeAttr("style");
+    }
+  });
+</script>
+
+</body>
+</html>
+
