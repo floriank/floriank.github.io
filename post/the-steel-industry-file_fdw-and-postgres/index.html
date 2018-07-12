@@ -490,7 +490,11 @@ end
 
 <h1 id="numbers-please">Numbers, please!</h1>
 
-<p>While I cannot provide a benchmark here, I can say that switching strategies reduced our import time for this particular piece of customer data <strong>from 300 seconds</strong> to about <strong>10 seconds</strong> average for any given synchronisation process. With the exception of a full synchronisation, which has to process and copy all the data from the external CSV to the internal tables, most of the runs are below those numbers.</p>
+<p>While I cannot provide a benchmark here, I can say that switching strategies reduced our import time for this particular piece of customer data <strong>from 300 seconds</strong> to about <strong>10 seconds</strong> average for any given synchronisation process. With the exception of a full synchronisation, which has to process and copy all the data from the external CSV to the internal tables, most of the runs are below those numbers. Nevertheless, here is a graph:</p>
+
+<p><center>
+    <img src="https://floriank.github.io/img/import-time.png" alt="Import time" />
+</center></p>
 
 <p>The load on the application is minimal and the actual bottleneck is the database. We use Elixir in this context to delegate and trigger, instead of doing the actual work.</p>
 
