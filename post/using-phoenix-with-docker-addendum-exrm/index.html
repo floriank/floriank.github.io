@@ -96,10 +96,9 @@
             <div class="post-content">
                 
 
-<p><em>This is an addendum to a three part series: <a href="https://floriank.github.io/post/using-phoenix-with-docker-part-1-introduction/">Part 1</a> - <a href="https://floriank.github.io/post/using-phoenix-with-docker-part-2-implementation/">Part 2</a> - <a href="No page found with path or logical name "using-phoenix-with-docker-part-3-containerization".
-">Part 3</a></em></p>
+<p><em>This is an addendum to a three part series: <a href="https://floriank.github.io/post/using-phoenix-with-docker-part-1-introduction/">Part 1</a> - <a href="https://floriank.github.io/post/using-phoenix-with-docker-part-2-implementation/">Part 2</a> - <a href="https://floriank.github.io/post/using-phoenix-with-docker-part-3-containerization/">Part 3</a></em></p>
 
-<h1 id="contents:0f704014dcbb27d9c18813e012e2f063">Contents</h1>
+<h1 id="contents">Contents</h1>
 
 <!-- MarkdownTOC -->
 
@@ -124,7 +123,7 @@
 
 <p><a name="bad-ideas"></a></p>
 
-<h2 id="bad-ideas:0f704014dcbb27d9c18813e012e2f063">Bad ideas</h2>
+<h2 id="bad-ideas">Bad ideas</h2>
 
 <p>I have had some bad ideas in the past - building a container out of a Phoenix application like building it out of a Rails application wasn&rsquo;t probably the best idea ever.</p>
 
@@ -134,7 +133,7 @@
 
 <p><a name="exrm"></a></p>
 
-<h2 id="exrm:0f704014dcbb27d9c18813e012e2f063">Exrm</h2>
+<h2 id="exrm">Exrm</h2>
 
 <p>Elixir offers the possibility of using a library called <a href="https://github.com/bitwalker/exrm">Exrm</a>, the Elixir release manager. It has the self proclaimed goal to make Elixir deployments very easy and delightful to work with.</p>
 
@@ -142,7 +141,7 @@
 
 <p><a name="using-exrm-with-kitteh"></a></p>
 
-<h2 id="using-exrm-with-kitteh:0f704014dcbb27d9c18813e012e2f063">Using Exrm with Kitteh</h2>
+<h2 id="using-exrm-with-kitteh">Using Exrm with Kitteh</h2>
 
 <p>Let&rsquo;s add it as a dependency:</p>
 
@@ -173,7 +172,7 @@ config :phoenix, :serve_endpoints, true
 
 <p><a name="building-the-docker-images---once-more"></a></p>
 
-<h2 id="building-the-docker-image-s-once-more:0f704014dcbb27d9c18813e012e2f063">Building the docker image(s) - once more.</h2>
+<h2 id="building-the-docker-image-s-once-more">Building the docker image(s) - once more.</h2>
 
 <p>Ideally, we can now copy over the release into our docker container instead of copying everything over and then compiling it inside.</p>
 
@@ -185,7 +184,7 @@ config :phoenix, :serve_endpoints, true
 
 <p><a name="the-agony-with-build-environments"></a></p>
 
-<h3 id="the-agony-with-build-environments:0f704014dcbb27d9c18813e012e2f063">The agony with build environments</h3>
+<h3 id="the-agony-with-build-environments">The agony with build environments</h3>
 
 <p>To keep the image contents to a minimum I decided to use the <code>msaraiva/alpine-erlang</code> image as a base and work from that. There is an excellent description on how to use this image as a base for a Phoenix application <a href="https://github.com/msaraiva/alpine-erlang#phoenix-exrm">in the repository for the image</a>.</p>
 
@@ -229,7 +228,7 @@ CMD trap exit TERM; /$APP_NAME/bin/$APP_NAME foreground &amp; wait
 
 <p><a name="results"></a></p>
 
-<h3 id="results:0f704014dcbb27d9c18813e012e2f063">Results!</h3>
+<h3 id="results">Results!</h3>
 
 <p>However, using the same versions everywhere should result in a new docker image for our application:</p>
 
@@ -245,7 +244,7 @@ CMD trap exit TERM; /$APP_NAME/bin/$APP_NAME foreground &amp; wait
 
 <p><a name="assets"></a></p>
 
-<h2 id="assets:0f704014dcbb27d9c18813e012e2f063">Assets</h2>
+<h2 id="assets">Assets</h2>
 
 <p>Since the web application image now completely ignores any asset containers, we need to add these in the build process, more specifically, in the <code>build-docker.sh</code>:</p>
 
@@ -259,7 +258,7 @@ docker build -f Dockerfile.assets -t kitteh/assets:0.0.1 .
 
 <p><a name="wait-migrations"></a></p>
 
-<h2 id="wait-migrations:0f704014dcbb27d9c18813e012e2f063">Wait! Migrations!</h2>
+<h2 id="wait-migrations">Wait! Migrations!</h2>
 
 <p>A downside of the compiled approach we&rsquo;re now taking is the fact that migrations are no longer part of the <code>kitteh/web</code> image, as the <code>priv/repo/migrations</code> folder gets dismissed at build (not really, but <code>Mix</code> is no longer available to us).</p>
 
@@ -277,7 +276,7 @@ docker build -f Dockerfile.assets -t kitteh/assets:0.0.1 .
 
 <p><a name="the-problem-with-mixenv"></a></p>
 
-<h2 id="the-problem-with-mix-env:0f704014dcbb27d9c18813e012e2f063">The problem with Mix.env</h2>
+<h2 id="the-problem-with-mix-env">The problem with Mix.env</h2>
 
 <p>We&rsquo;re not using <code>Mix.env</code> anymore in production, so shenanigans like:</p>
 
@@ -293,7 +292,7 @@ docker build -f Dockerfile.assets -t kitteh/assets:0.0.1 .
 
 <p><a name="so-were-going-to-ignore-imagemagick"></a></p>
 
-<h2 id="so-we-re-going-to-ignore-imagemagick:0f704014dcbb27d9c18813e012e2f063">So, we&rsquo;re going to ignore ImageMagick?</h2>
+<h2 id="so-we-re-going-to-ignore-imagemagick">So, we&rsquo;re going to ignore ImageMagick?</h2>
 
 <p>By now, looking at <a href="https://github.com/floriank/kitteh-phoenix/commit/04ecae10051833fb2acbc05a0daae964042087a5">the latest commit</a>, the application should run again.</p>
 
@@ -340,7 +339,7 @@ RUN apk --update add erlang erlang-sasl erlang-crypto erlang-syntax-tools imagem
 
 <p><a name="conclusion"></a></p>
 
-<h2 id="conclusion:0f704014dcbb27d9c18813e012e2f063">Conclusion</h2>
+<h2 id="conclusion">Conclusion</h2>
 
 <p><em>If you skipped directly to my conclusion, please see the tag <a href="https://github.com/floriank/kitteh-phoenix/tree/10-imagemagick-finally"><code>10-imagemagick-finally</code></a> for the codebase at the end of this article</em>.</p>
 

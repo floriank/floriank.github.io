@@ -100,7 +100,7 @@
 
 <p><strong>Note</strong>: I am using the latest <code>docker-compose</code> and the latest <code>docker-engine</code> later on in this post.</p>
 
-<h1 id="contents:8058a1d8ca608171d45c42d3c59fef01">Contents</h1>
+<h1 id="contents">Contents</h1>
 
 <!-- MarkdownTOC -->
 
@@ -133,7 +133,7 @@
 
 <p><a name="composition"></a></p>
 
-<h2 id="composition:8058a1d8ca608171d45c42d3c59fef01">Composition</h2>
+<h2 id="composition">Composition</h2>
 
 <p>Before actually starting with the Dockerfile of our own codebase, let&rsquo;s introduce a <a href="https://docs.docker.com/compose/overview/">docker compose</a> configuration, which is a YAML file called <code>docker-compose.yml</code>:</p>
 
@@ -185,7 +185,7 @@ Cannot locate specified Dockerfile: Dockerfile
 
 <p><a name="kitteh-dockerfile"></a></p>
 
-<h2 id="kitteh-dockerfile:8058a1d8ca608171d45c42d3c59fef01">Kitteh Dockerfile</h2>
+<h2 id="kitteh-dockerfile">Kitteh Dockerfile</h2>
 
 <p>Remmembering the section about resizing in part 2 earlier, we know that we have ImageMagick as a dependency besides the actual Erlang VM and OTP to provide.</p>
 
@@ -282,7 +282,7 @@ web_1    | [error] Could not start watcher because &quot;node&quot; is not avail
 
 <p><a name="database-connections"></a></p>
 
-<h2 id="database-connections:8058a1d8ca608171d45c42d3c59fef01">Database connections</h2>
+<h2 id="database-connections">Database connections</h2>
 
 <p>We should see if we can make the database work.</p>
 
@@ -342,7 +342,7 @@ mix ecto.migrate
 
 <p><a name="tearing-it-all-down"></a></p>
 
-<h2 id="tearing-it-all-down:8058a1d8ca608171d45c42d3c59fef01">Tearing it all down</h2>
+<h2 id="tearing-it-all-down">Tearing it all down</h2>
 
 <p>If we restart our composition, we should take note that our database data should have been persisted. But if we reload the image url we just generated, the image will be gone, as the actual images are not persisted in the container.</p>
 
@@ -359,7 +359,7 @@ nginx:
 
 <p><a name="container-structure"></a></p>
 
-<h3 id="container-structure:8058a1d8ca608171d45c42d3c59fef01">Container structure</h3>
+<h3 id="container-structure">Container structure</h3>
 
 <p>Let&rsquo;s talk about the basic idea first:</p>
 
@@ -375,7 +375,7 @@ nginx:
 
 <p><a name="creating-the-volume-container"></a></p>
 
-<h3 id="creating-the-volume-container:8058a1d8ca608171d45c42d3c59fef01">Creating the volume container</h3>
+<h3 id="creating-the-volume-container">Creating the volume container</h3>
 
 <p>Before we add our container, we should reevaluate where exactly we want to store our images.</p>
 
@@ -410,7 +410,7 @@ assets:
 
 <p><a name="docker-110"></a></p>
 
-<h3 id="docker-1-10:8058a1d8ca608171d45c42d3c59fef01">Docker 1.10</h3>
+<h3 id="docker-1-10">Docker 1.10</h3>
 
 <p>This is where things get interesting - Docker <a href="https://blog.docker.com/2016/02/docker-1-10/">was recently updated to v1.10.0</a> - and along with it came an update to <code>docker-compose</code> with a new version of the syntax, allowing for custom dockerfile directives in the <code>build</code> object of the configuration.</p>
 
@@ -422,13 +422,13 @@ assets:
 
 <p><a name="configuring-nginx"></a></p>
 
-<h3 id="configuring-nginx:8058a1d8ca608171d45c42d3c59fef01">Configuring nginx</h3>
+<h3 id="configuring-nginx">Configuring nginx</h3>
 
 <p>I went with a super simple <a href="https://github.com/floriank/kitteh-phoenix/commit/080baab1abe78f2d3f508c0b3eede7c6182a0d09">nginx configuration file</a>, which is bogus, but should work nonetheless.</p>
 
 <p><a name="running-the-containers"></a></p>
 
-<h3 id="running-the-containers:8058a1d8ca608171d45c42d3c59fef01">Running the containers</h3>
+<h3 id="running-the-containers">Running the containers</h3>
 
 <p>A simple</p>
 
@@ -439,7 +439,7 @@ assets:
 
 <p><a name="assets-and-images"></a></p>
 
-<h3 id="assets-and-images:8058a1d8ca608171d45c42d3c59fef01">Assets and images</h3>
+<h3 id="assets-and-images">Assets and images</h3>
 
 <p>Wait, what about assets? We still get something along the lines of</p>
 
@@ -486,7 +486,7 @@ assets:
 
 <p><strong>Note</strong>: At this point I noticed a flaw in the <code>Dockerfile</code> for the main application - Compilation was not done properly, so I had to reintroduce an env variable to <a href="https://github.com/floriank/kitteh-phoenix/commit/362cb0eae4553c418b4729822429a3d324959cc7">mark production compilation</a>.</p>
 
-<h4 id="assets:8058a1d8ca608171d45c42d3c59fef01">Assets</h4>
+<h4 id="assets">Assets</h4>
 
 <p>Phoenix purposefully does not integrate an asset pipeline and instead delegates to a library called <code>brunch</code> (see <a href="https://brunch.io">brunch.io</a>) to handle static assets like JavaScript and CSS.</p>
 
@@ -586,7 +586,7 @@ config :kitteh, Kitteh.Endpoint,
 
 <p><a name="looking-back"></a></p>
 
-<h2 id="looking-back:8058a1d8ca608171d45c42d3c59fef01">Looking back</h2>
+<h2 id="looking-back">Looking back</h2>
 
 <p>We have done a lot so far. We <a href="https://floriank.github.io/post/using-phoenix-with-docker-part-2-implementation/">coded a small uploader application</a> and put most of the dependencies into containers.</p>
 
@@ -603,7 +603,7 @@ config :kitteh, Kitteh.Endpoint,
 
 <p><a name="cleaning-up"></a></p>
 
-<h3 id="cleaning-up:8058a1d8ca608171d45c42d3c59fef01">Cleaning up</h3>
+<h3 id="cleaning-up">Cleaning up</h3>
 
 <p>We do have some prolems with the setup as well:</p>
 
@@ -635,13 +635,13 @@ node_modules/
 
 <p><a name="one-more-thing"></a></p>
 
-<h2 id="one-more-thing:8058a1d8ca608171d45c42d3c59fef01">One more thing</h2>
+<h2 id="one-more-thing">One more thing</h2>
 
 <p>We could have also used <a href="https://github.com/bitwalker/exrm">Exrm</a> to bundle and prepare a release into a container. I will (probably) explore this in a later entry.</p>
 
 <p><a name="conclusion"></a></p>
 
-<h2 id="conclusion:8058a1d8ca608171d45c42d3c59fef01">Conclusion</h2>
+<h2 id="conclusion">Conclusion</h2>
 
 <p>If you read this far - thanks! I hope you found the material I provided interesting and you can take something away for your own projects.</p>
 

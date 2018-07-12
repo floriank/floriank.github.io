@@ -1,0 +1,595 @@
+<html lang="en">
+<head>
+
+  
+  <meta charset="utf-8">
+  <title>The steel industry, file_fdw and the synchronisation of data</title>
+  <meta name="description" content="The steel industry, file_fdw and the synchronisation of data">
+  <meta name="author" content="Florian Kraft">
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="https://floriank.github.io/css/fonts.css">
+  
+  
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
+  
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
+
+  <link rel="stylesheet" href="https://floriank.github.io/css/custom.css">
+
+  
+  
+  <link rel="stylesheet" href="https://floriank.github.io/highlight/styles/default.css">
+  
+  <script src="https://floriank.github.io/highlight/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+</head>
+<body>
+
+
+<div class="header pure-g">
+    <div class="pure-u-1-24 pure-u-md-5-24"></div>
+    <div class="pure-u-11-12 pure-u-md-5-8">
+        <div class="desktop pure-menu pure-menu-horizontal nav-menu">
+            
+            <a href="https://floriank.github.io/" class="site-title pure-menu-heading">Notes of an awful developer</a>
+            <ul class="pure-menu-list">
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/categories/development" class="pure-menu-link">Development</a>
+                </li>
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/about/" class="pure-menu-link">About</a>
+                </li>
+            </ul>
+        </div>
+        <div class="mobile pure-menu nav-menu">
+            <a href="https://floriank.github.io/" class="pure-menu-heading" id="toggle-home">Notes of an awful developer</a>
+            <a href="#" id="toggle-btn">&#9776;</a>
+            <ul class="pure-menu-list" id="toggle-content" style="display:none;">
+                
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/categories/development" class="pure-menu-link">Development</a>
+                </li>
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/about" class="pure-menu-link">About</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="pure-u-1-24 pure-u-md-1-6"></div>
+</div>
+
+
+<div class="pure-g">
+    <div class="pure-u-1-24 pure-u-md-5-24"></div>
+	<div class="pure-u-11-12 pure-u-md-5-8">
+        <div class="post">
+
+            <div class="post-title">
+                <p class="footnote">
+                    <time class="">2018-07-12</time>
+		            
+                    
+                    |
+                    
+                    
+
+                    
+                    categories:<a href="https://floriank.github.io/categories/development">development</a> 
+                    
+
+                    
+                </p>
+                <h1>The steel industry, file_fdw and the synchronisation of data</h1>
+            </div>
+
+            <div class="post-content">
+                
+
+<h1 id="contents">Contents</h1>
+
+<!-- MarkdownTOC autolink=true -->
+
+<ul>
+<li><a href="#steel-me">Steel me.</a></li>
+<li><a href="#on-the-process-of-selling-metals-world-wide">On the process of selling metals world wide</a></li>
+<li><a href="#synchronisation-vs-import">Synchronisation vs. Import</a></li>
+<li><a href="#postgresql-how-i-love-thee">PostgreSQL, how I love thee</a>
+
+<ul>
+<li><a href="#foreign-data-wrappers">Foreign data wrappers</a></li>
+<li><a href="#file_fdw">file_fdw</a></li>
+</ul></li>
+<li><a href="#using-file_fdw-with-ecto">Using file_fdw with Ecto</a></li>
+<li><a href="#transform-the-data">Transform the data</a></li>
+<li><a href="#the-key-to-doing-things-fast">The key to doing things fast</a></li>
+<li><a href="#joining-external-and-internal-tables">Joining external and internal tables</a></li>
+<li><a href="#what-to-do-next">What to do next?</a></li>
+<li><a href="#numbers-please">Numbers, please!</a></li>
+<li><a href="#so-we-use-this-all-the-time-now">So, we use this all the time now?</a></li>
+<li><a href="#learnings-and-a-repository">Learnings and a repository</a></li>
+</ul>
+
+<!-- /MarkdownTOC -->
+
+<h1 id="steel-me">Steel me.</h1>
+
+<p>My god.</p>
+
+<p>It has been <strong>2 years</strong> since I wrote something.</p>
+
+<p>I am really bad at social media.</p>
+
+<p>I also started working as a developer for a company called <a href="https://kloeckner.com">Klöckner &amp; Co</a>. To be exact, I work for its subsidiary called <a href="https://kloeckner-i.com">kloeckner.i</a>, which is focused on bringing the other subsidiaries (<a href="http://www.kdi.fr/">Kloeckner France</a>, <a href="https://www.kloeckner.co.uk/">Kloeckner UK</a>, <a href="https://kloecknermetals.com">Kloeckner Metals US</a> and many more), of the group into a glorious, bright and &hellip; well, digital future.</p>
+
+<p>We are building tools to help our companies trade and deal with our products - <em>steel &amp; metals</em> - in a digital fashion (as opposed to analog).
+It&rsquo;s all about innovation (the &ldquo;i&rdquo; in kloeckner.i) and coming up with new ideas on how the industry will operate in 10 years from now. Interesting stuff!
+If you want to learn more, you can watch our main man, CEO of the group, Mr. Gisbert Rühl himself <a href="https://www.youtube.com/watch?v=RJrKjxsze0s">explaining the concepts</a> of the how and why.</p>
+
+<p>In the meantime, after having built the inital team, I am now working as a the Lead Software Architect in kloeckner.i. For starters, this meant leaving the shackles of management behind and focusing more on the technical implementation of the ideas that our tech and product department provide.
+In order to understand the challenges we face at kloeckner.i, one needs to understand how the overall business model looks like.</p>
+
+<h1 id="on-the-process-of-selling-metals-world-wide">On the process of selling metals world wide</h1>
+
+<p><center>
+  <a href="https://floriank.github.io/img/distribution.png"><img src="https://floriank.github.io/img/distribution.png" alt="The distribution of steel" /></a>
+</center></p>
+
+<p>While the processes are different from country to another, the main mechanism stays the same - we <em>buy</em> the steel from a <em>mill</em> (a producer smelting various materials), store it in our <em>warehouses</em> and then deliver it to our customers. For whatever your project may look like, Klöckner can provide the metals necessary to make your dream of a skyscraper reality. Or a bridge. Or yacht. Or you just really like buying a couple tons of steel from us. We got you.
+At kloeckner.i, we deal with the fact that this business model generates a ton of data, which comes in different forms and shapes. All the services that we provide are powered by this data, sometimes enriched, sometimes raw. Nevertheless, it is always put to use by providing it through applications to the end user.</p>
+
+<p>And since we cannot connect your laptop, mobile phone or PDA (you still have yours, right?) directly to the source of data (the ERP of the country organization), we have to transform it and store it away for usage in our services. The data we get most often comes in the form of structured text: CSV and XML in most cases. Overall, we employ various means of transmitting data from the subsidiaries&rsquo; ERP to our services:</p>
+
+<ol>
+<li>Transmitting files via (S)FTP and then
+
+<ul>
+<li>Straight imports via scripts (<code>./import.rb &lt; Company.csv</code>)</li>
+<li>Utitlizing <a href="https://github.com/elixir-lang/gen_stage">GenStage</a> and/or <a href="https://github.com/elixir-lang/flow">Flow</a> to make sense of the data and process it</li>
+</ul></li>
+<li>Using APIs to allow data push</li>
+<li>Using queueing strategies to distribute pieces of the data to our services</li>
+</ol>
+
+<p>Most of these methods work to varying degrees. For one-time-imports of single files, the straight imports usually work best, as they are simple and easy to understand. APIs are also nice, since you can fend off broken data early. The downside is that not everyone can immediately use an API as actively pushing data is not always possible. Queueing strategies are well understood, but require monitoring and are tough to debug.</p>
+
+<p>The overall strategy, however, stays the same:</p>
+
+<p><center>
+  <img src="https://floriank.github.io/img/strategy.png" alt="The import of data" />
+</center></p>
+
+<h1 id="synchronisation-vs-import">Synchronisation vs. Import</h1>
+
+<p>Keeping our requirements in mind and the the fact that we need to operate a copy on the data, the challenge here is to keep everything in sync. The external system will provide a data dump <em>somehow</em> and we are tasked to make sure that we have the same data in our systems.</p>
+
+<p>Having realized this, we usually speak of synchronisation at kloeckner.i - and as I set out to find a better solution for our long running imports, while attending the <a href="https://elixirconf.eu">ElixirConf 2018 in Warsaw</a> I watched the <a href="https://www.youtube.com/watch?v=tytHbbjeHMM&amp;list=PLWbHc_FXPo2hJchaMDq_5FGn-lmGf-DAn&amp;index=7">keynote</a> by developer <a href="https://github.com/evadne">Evadne Wu</a>. She dealt with the topic of data imports and called for having a better relationship with our data storage. As it turns out, <a href="https://postgresql.org">PostgreSQL</a> offers a ton of useful extra features that I had ignored for way too long.</p>
+
+<h1 id="postgresql-how-i-love-thee">PostgreSQL, how I love thee</h1>
+
+<p>We use PostgreSQL extensively at kloeckner.i. It&rsquo;s our go-to storage layer and nearly all of our projects include a PostgreSQL in development, usually in the form of a docker container. In fact, most projects look like this when you get into their <code>docker-compose.yml</code>:</p>
+
+<pre><code class="language-yaml">version: &quot;3.4&quot;
+services:
+  app:
+    command: mix do deps.get, phx.server
+    build: .
+    ports:
+      - 4000:4000
+    depends_on:
+      - db
+  db:
+    image: &lt;gitlab-registry&gt;/infrastructure/postgres:latest
+    volumes:
+      - /var/lib/postgresql
+    ports:
+      - 5432:5432
+</code></pre>
+
+<p>Before you type that tweet to the end: <code>latest</code> is just the current version we use for all projects. We are managing the PostgreSQL version used centrally in a custom build image.</p>
+
+<h2 id="foreign-data-wrappers">Foreign data wrappers</h2>
+
+<p>PostgreSQL has the ability to interact with foreign data objects, utilizing its foreign data wrapper feature.</p>
+
+<p>Foreign Data Wrappers are a set of extensions you can use to interact with data sources that are not natively known to PostgreSQL. The <a href="https://wiki.postgresql.org/wiki/Foreign_data_wrappers">full list</a> is quite impressive - and although not everything is stable and supported, the most interesting wrappers are included by default.</p>
+
+<h2 id="file-fdw">file_fdw</h2>
+
+<p>Besides funky things like the <code>docker_fdw</code>, there is the very useful <code>file_fdw</code>. There are a couple of these for a multitude of file formats, including PostgreSQLs own <code>pg_dump</code> SQL, JSON, XML and <em>CSV</em>.
+Wait, this means&hellip;</p>
+
+<h1 id="using-file-fdw-with-ecto">Using file_fdw with Ecto</h1>
+
+<p><strong>Disclaimer</strong>: This uses Ecto because Elixir based applications are widespread within kloeckner.i. It has become one of our primary languages and is used throughout all of our teams. You can copy this approach to any other programming language, if you wish.</p>
+
+<pre><code class="language-elixir">defmodule SynchronizeApp.Repo.Migrations.AddFileFdwExtension do
+  use Ecto.Migration
+  @up ~s&quot;&quot;&quot;
+    CREATE extension file_fdw;
+  &quot;&quot;&quot;
+  @down ~s&quot;&quot;&quot;
+    DROP EXTENSION file_fdw;
+  &quot;&quot;&quot;
+  def change do
+    execute(@up, @down)
+  end
+end
+</code></pre>
+
+<p>This will create the <code>file_fdw</code> extension. It&rsquo;s included in the later version of PostgreSQL, you just need to activate it. In another migration, we need to enable a server, a virtual object our table definitions will be bound to later on:</p>
+
+<pre><code class="language-elixir">defmodule SynchronizeApp.Repo.Migrations.AddForeignFileServer do
+  use Ecto.Migration
+  @server_name &quot;files&quot;
+  @up ~s&quot;&quot;&quot;
+    CREATE SERVER #{@server_name} FOREIGN DATA WRAPPER file_fdw;
+  &quot;&quot;&quot;
+  @down ~s&quot;&quot;&quot;
+    DROP SERVER #{@server_name};
+  &quot;&quot;&quot;
+  def change do
+    execute(@up, @down)
+  end
+end
+</code></pre>
+
+<p>I personally advise to use <a href="https://hexdocs.pm/ecto/Ecto.Migration.html#execute/2">Ecto.Migration.execute/2</a>, in order to have migrations that can be rolled back here. Alas, since the SQL here has no DSL in Ecto itself, we need to resort to executing it directly.</p>
+
+<p>And that is it! We now need to create tables for the CSV files we receive from an external source. For reference, this is what such a file normally looks like:</p>
+
+<pre><code class="language-csv">company_id|name|address1|address2|city|state|zipcode|country
+137521| Acme Inc     |1381 East I   ***20 Access&quot;&quot; Road|  pleas, talk to &quot;MAUDE&quot;|Maraune|AK|733-336|United States
+11582| Stark Industries|14065  SW 142 ST|                              |New York|NY|33186|United States
+</code></pre>
+
+<p>The <code>file_fdw</code> wrapper ideally is fed with <a href="https://tools.ietf.org/html/rfc4180">RFC4180</a> compliant CSV. In the real world, years of manual data entry have done some harm to the overall data quality, so we need to clean up here a bit. Also, we do get some weird characters in the files, including quotes (<code>&quot;</code>), which cause havoc when not using an addtional configuration.</p>
+
+<p>Never lose hope, this is all digestable with the options given to the table definition:</p>
+
+<pre><code class="language-elixir">defmodule SynchronizeApp.Repo.Migrations.AddForeignCompaniesTable do
+  use Ecto.Migration
+  @up ~s&quot;&quot;&quot;
+    CREATE FOREIGN TABLE external_companies (
+      company_id text,
+      name text,
+      address1 text,
+      address2 text,
+      city text,
+      state text,
+      zipcode text,
+      country text
+    ) SERVER kmc_files
+    OPTIONS ( filename '/files/Company.csv', format 'csv', delimiter '|', header 'on', quote E'\x01');
+  &quot;&quot;&quot;
+  @down ~s&quot;&quot;&quot;
+    DROP FOREIGN TABLE kmc_companies;
+  &quot;&quot;&quot;
+  def change do
+    execute(@up, @down)
+  end
+end
+</code></pre>
+
+<p>The interesting things here are:</p>
+
+<ul>
+<li><code>SERVER files</code> - this references the virtual server object we created ealier.</li>
+<li><code>OPTIONS ( filename '/files/Company.csv', format 'csv', delimiter '|', header 'on', quote E'\x01')</code> - let&rsquo;s see:
+
+<ul>
+<li><code>filename</code> is the location of the file to be read, this <strong>must</strong> be known to the database server</li>
+<li><code>format</code> is <code>csv</code>, but can also be <code>text</code> (giving no options for header configuration)</li>
+<li><code>header 'on'</code> defines the first line of the file to be a header, similar to how a lot of libraries work</li>
+<li><code>delimiter '|'</code> gives a custom delimiter character, in our case <code>|</code>, a pipe.</li>
+<li><code>quote E'\x01'</code> defines the quote character to be a non-printable character that should never pop up in the file to be read. Unfortunately, it cannot be configured to take an empty string.</li>
+</ul></li>
+<li>all of the column definitions map to the columns of the CSV header - and everything is <code>text</code></li>
+</ul>
+
+<p>This, while being a very rigid table that has no types and is less flexible, still gives us the opportunity to query the data directly, using SQL:</p>
+
+<pre><code class="language-sql">SELECT company_id, name FROM external_companies LIMIT 1;
+</code></pre>
+
+<p>Result:</p>
+
+<pre><code>|name          |company_id|
++--------------+----------+
+| Acme Inc     |137521    |
+</code></pre>
+
+<p>Sweet.</p>
+
+<p><strong>Note</strong>: The options are directly linked to the options for PostgreSQL&rsquo;s <a href="https://www.postgresql.org/docs/current/static/sql-copy.html">COPY command</a>, which is a very effective tool if you just want to do a single time import of data you have as CSV files.</p>
+
+<h1 id="transform-the-data">Transform the data</h1>
+
+<p>Since we now have everything available as a table, nothing stops us from utilizing the functions that PostgreSQL gives us:</p>
+
+<pre><code class="language-sql">SELECT TRIM(name), company_id, MD5(CONCAT(company_id, name)) as hash FROM external_companies LIMIT 1;
+</code></pre>
+
+<p>Result:</p>
+
+<pre><code>|name          |company_id|hash                            |
++--------------+----------+--------------------------------+
+|Acme Inc      |137521    |b4fa5d3e03248e285c6cc57ac4f4862e|
+</code></pre>
+
+<p>And it works like a charm. Partitions using <code>WHERE</code> are also possible, but be cautious - there are no indizes to back you up here.</p>
+
+<h1 id="the-key-to-doing-things-fast">The key to doing things fast</h1>
+
+<p>There is a <a href="https://lists.freebsd.org/pipermail/freebsd-current/2010-August/019310.html">great explanation</a> about why <code>grep</code> is fast - simply spoken: &ldquo;Being fast usually means not doing a lot of things&rdquo;, or, to quote:</p>
+
+<blockquote>
+<p>The key to making programs fast is to make them do practically nothing. ;-)</p>
+</blockquote>
+
+<p>And it&rsquo;s true for our usecase as well: When importing data, we should avoid doing things we don&rsquo;t need to do. And since we keep our CSV files and our service&rsquo;s tables in one place, there must be a way of finding out the actual workload is. The answer here is: <code>JOIN</code>s.</p>
+
+<h1 id="joining-external-and-internal-tables">Joining external and internal tables</h1>
+
+<p>When having access to tables that should keep the same information, finding the difference over several fields can be done using an SQL <code>JOIN</code> - a full overview over all the <a href="https://www.w3schools.com/sql/sql_join.asp">joins can be found here</a>. In a more visual fashion, having the csv data as current data, and the internal copied data, we can use a <code>LEFT JOIN</code> to find the differences by joining on a hash created from the fields that we&rsquo;re interested in:</p>
+
+<p><center>
+  <img src="https://floriank.github.io/img/joins.png" alt="Join me, baby" />
+</center></p>
+
+<p>The full SQL looks a bit scary, but does effectively what is shown above:</p>
+
+<pre><code>SELECT external.company_id, external.name
+  FROM external_companies external
+LEFT JOIN internal_companies internal
+  ON MD5(CONCAT(external.company_id, TRIM(external.name)))
+  = MD5(CONCAT(internal.external_id, TRIM(internal.name)))
+WHERE internal.external_id IS NULL
+</code></pre>
+
+<p>It will result in a changeset that we have to digest. In the specific case of having changed <strong>Acme Inc</strong> to <strong>Acme Inc1</strong>, we can tell by the changed hash that this record needs to be updated in our service&rsquo;s data.</p>
+
+<h1 id="what-to-do-next">What to do next?</h1>
+
+<p>Well, again, Elixir allows use to model this process in very small functions. Visualized by two modules, it can look like this:</p>
+
+<p><center>
+  <img src="https://floriank.github.io/img/import_modules.png" alt="Modules!" />
+</center></p>
+
+<p>We create to modules, one which we&rsquo;ll call <code>SQLModule</code> that will be used to hold functions that run a Query to determine what the changeset looks like and one that will actually execute insert/update/delete the data in our service tables. Let&rsquo;s call that one the <code>ImportModule</code>.</p>
+
+<p><strong>Full disclosure</strong>: In the real world, we employ data checking and we actually need to grab data from multiple files into a state that makes sense to use it in the tools we built for our customers. That also means, that reality is usually not as simple as it is and we needed to design more complex queries, joining the data of multiple CSVs together.</p>
+
+<p>Let&rsquo;s have a look at the <code>SQLModule</code>:</p>
+
+<pre><code class="language-elixir">defmodule Synchronize.Companies.SQLModule do
+  @moduledoc &quot;&quot;&quot;
+  The module will upsert given companies in batches into the services database.
+  &quot;&quot;&quot;
+  alias MyService.{Company, Repo}
+  alias Synchronize.ImportModule
+  alias Ecto.Adapters.SQL
+  
+  @doc &quot;&quot;&quot;
+  the main entrypoint for this module
+  &quot;&quot;&quot;
+  def sync do
+    find_companies() |&gt; run()
+  end
+  
+  @doc &quot;&quot;&quot;
+  Starts the import for a given set of companies
+  &quot;&quot;&quot;
+  def run(companies) do
+    ImportModule.execute(companies, &amp;map/1, &amp;import_batch/1)
+  end
+  
+  @doc &quot;&quot;&quot;
+  Find missing companies in the services database
+  &quot;&quot;&quot;
+  def find_companies do
+    SQL.stream(Repo, &quot;&quot;&quot;
+    SELECT external.company_id, external.name
+      FROM external_companies external
+    LEFT JOIN companies -- companies is the internal table
+      ON MD5(CONCAT(external.company_id, TRIM(external.name)))
+      = MD5(CONCAT(companies.external_id, TRIM(companies.name)))
+    WHERE companies.external_id IS NULL
+    &quot;&quot;&quot;)
+  end
+
+  defp map([external_id, name]) do
+    now = DateTime.utc_now()
+    %{
+      name: String.trim(name),
+      external_id: external_id,
+      inserted_at: now,
+      updated_at: now
+    }
+  end
+
+  defp import_batch(batch) do
+    Repo.insert_all(
+      Company,
+      batch,
+      on_conflict: :replace_all,
+      conflict_target: :external_id
+    )
+  end
+end
+</code></pre>
+
+<p>Running <code>Synchronize.Companies.SQLModule.sync/1</code> will now trigger the query described earlier - whatever changeset is found, will then be given to the <code>ImportModule</code>, which holds functions to execute the mapping necessary (<code>Synchronize.Companies.SQLModule.map/1</code>) and the actual logic to import a single batch of that change (<code>Synchronize.Companies.SQLModule.import_batch/1</code>).</p>
+
+<p>The <code>ImportModule</code> is rather simple:</p>
+
+<pre><code>defmodule Synchronize.ImportModule do
+  @moduledoc &quot;&quot;&quot;
+  The module supports data synchronization from a source of thruth, allowing
+  transformations
+  &quot;&quot;&quot;
+  require Logger
+  alias MyService.Repo
+  
+  @doc &quot;&quot;&quot;
+  Starts the import for a given set of billing addresses
+  &quot;&quot;&quot;
+  def execute(source, mapper, importer) do
+    Logger.info(&quot;Synchronizing...&quot;)
+    started = System.monotonic_time()
+    {:ok, count} = run(source, mapper, importer)
+    finished = System.monotonic_time()
+    time_spent =
+      System.convert_time_unit(finished - started, :native, :milliseconds)
+    Logger.info(&quot;Synchronized #{count} item(s) in #{time_spent} millisecond(s)&quot;)
+  end
+
+  @batch_size 2_000
+
+  defp run(source, item_mapper, batch_processor) do
+    processor = fn batch -&gt;
+      batch_processor.(batch)
+      batch
+    end
+    Repo.transaction(fn -&gt;
+      source
+      |&gt; stream_row()
+      |&gt; Stream.map(item_mapper)
+      |&gt; Stream.chunk_every(@batch_size)
+      |&gt; Stream.flat_map(processor)
+      |&gt; Enum.count()
+    end)
+  end
+
+  def stream_row(source) when is_list(source) do
+    source
+  end
+
+  def stream_row(%Ecto.Adapters.SQL.Stream{} = source) do
+    Stream.flat_map(source, fn %{rows: rows} -&gt; rows end)
+  end
+end
+</code></pre>
+
+<p>Essentially the <code>ImportModule</code> will stream the results from the query, chunk the resulting changeset by a <code>@batch_size</code> and then execute the import function (<code>batch_processor</code>) given.</p>
+
+<p>If we want to further develop this, we can now write several of these <code>SQLModules</code> with their own mappers and processors and use this <code>ImportModule</code> to execute the logic.</p>
+
+<p><strong>NOTE</strong>: In reality, the trigger for finding the changeset is centralized on a lockfile which contains a timestamp. The synchronisation process happens when the timestamp changes. We do nothing we don&rsquo;t really have to do.</p>
+
+<h1 id="numbers-please">Numbers, please!</h1>
+
+<p>While I cannot provide a benchmark here, I can say that switching strategies reduced our import time for this particular piece of customer data <strong>from 300 seconds</strong> to about <strong>10 seconds</strong> average for any given synchronisation process. With the exception of a full synchronisation, which has to process and copy all the data from the external CSV to the internal tables, most of the runs are below those numbers.</p>
+
+<p>The load on the application is minimal and the actual bottleneck is the database. We use Elixir in this context to delegate and trigger, instead of doing the actual work.</p>
+
+<h1 id="so-we-use-this-all-the-time-now">So, we use this all the time now?</h1>
+
+<p><em>No</em> - while this mechanism is interesting, fast and fun to work with (it&rsquo;s also a great debugging tool for CSV inspection when Excel is just a little to intense to use), the solution has to fit the use case.</p>
+
+<p>In general, you should avoid it, if:
+- you only import once
+- you don&rsquo;t feel comfortable using SQL and have extremely complicated transformations
+- you don&rsquo;t have a stable csv definition
+- you cannot afford to have business logic tied to your database
+The strategy is worth a shot if:
+- you need to compare state of several files and the data you have
+- you need it fast (PostgreSQL COPY is pretty fast)
+- You want to offload more to your database server</p>
+
+<h1 id="learnings-and-a-repository">Learnings and a repository</h1>
+
+<p>The main thing to take away for our work at kloeckner.i (and for myself) was that PostgreSQL offers so much that it&rsquo;s almost scary. After having run through many iterations of trying out import strategies we finally found something that fits a lot of our use cases.</p>
+
+<p>If you want to try this and see this strategy in action - I prepared <a href="https://github.com/floriank/postgres_sync_file_fdw">a repo</a> showing the technique with some test data. It runs as two docker containers, so you should be able to use it right away. If you have questions, drop me an <a href="mailto:schnuffifk+blog@gmail.com">email</a> - I&rsquo;ll be glad to help.</p>
+
+<p>If you completely disagree with all of this, I encourage you to take a look at our<a href="https://kloeckner-i.com/jobs">jobs page</a>. We&rsquo;re always looking for smart engineers that can contribute to making the transformation of a whole industry a successful story.</p>
+
+<p>It&rsquo;s also the best team in the world, not that I might be biased or anything.</p>
+
+            </div>
+        </div>
+	</div>
+    <div class="pure-u-1-24 pure-u-md-1-6"></div>
+</div>
+
+<div class="footer pure-g">
+    <div class="pure-u-1-24 pure-u-md-5-24"></div>
+    <div class="pure-u-11-12 pure-u-md-5-8">
+        <div class="pure-menu pure-menu-horizontal footer-content">
+            <ul>
+                <li class="pure-menu-heading" id="foot-name">Florian Kraft:</li>
+
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://github.com/floriank" class="pure-menu-link">GitHub</a>
+                </li>
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://www.linkedin.com/in/floriankraft" class="pure-menu-link">LinkedIn</a>
+                </li>
+                
+
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://twitter.com/carhillion" class="pure-menu-link">Twitter</a>
+                </li>
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://stackoverflow.com/users/498226/florian" class="pure-menu-link">Stack Overflow</a>
+                </li>
+                
+                <li class="pure-menu-item right">
+                  <a class="pure-menu-link" href="https://github.com/gizak/nofancy/">Theme based on the most excellent nofancy theme</a>
+                </li>
+            </ul>
+            <a href="#" class="pure-menu-heading pull-right" id="gototop-btn">↑↑</a>
+        </div>
+	  </div>
+      <div class="pure-u-1-24 pure-u-md-1-6"></div>
+</div>
+
+
+<script src="https://floriank.github.io/js/jquery.min.js" type="text/javascript"></script>
+<script src="https://floriank.github.io/js/jquery.timeago.js" type="text/javascript"></script>
+<script type="text/javascript">
+  $(function(){
+    $("time.timeago").timeago();
+  })
+  $("#toggle-btn").click(function(){
+    $("#toggle-content").toggle();
+    if($(this).html() === "☰") {
+        $(this).html("X")
+    } else {
+        $(this).html("☰")
+    }
+  });
+  $(window).resize(function(){
+    if(window.innerWidth > 768) {
+      $(".desktop").removeAttr("style");
+    }
+  });
+</script>
+
+</body>
+</html>
+

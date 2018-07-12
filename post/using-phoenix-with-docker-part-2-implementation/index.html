@@ -98,7 +98,7 @@
 
 <p><em>This is part two of a three part series</em>: <a href="https://floriank.github.io/post/using-phoenix-with-docker-part-1-introduction/">Part 1</a> - <strong>Part 2</strong> - <a href="https://floriank.github.io/post/using-phoenix-with-docker-part-3-containerization/">Part 3</a></p>
 
-<h1 id="contents:7debb73c6a3fd6f5aa2c2da8cbce28e8">Contents</h1>
+<h1 id="contents">Contents</h1>
 
 <!-- MarkdownTOC -->
 
@@ -134,13 +134,13 @@
 
 <p><a name="installation"></a></p>
 
-<h2 id="installation:7debb73c6a3fd6f5aa2c2da8cbce28e8">Installation</h2>
+<h2 id="installation">Installation</h2>
 
 <p>Before we start, please make sure you install Elixir and Phoenix. If you do not care or have already installed both, you can skip the next section.</p>
 
 <p><a name="elixir"></a></p>
 
-<h3 id="elixir:7debb73c6a3fd6f5aa2c2da8cbce28e8">Elixir</h3>
+<h3 id="elixir">Elixir</h3>
 
 <p>Installing Elixir is actually not too difficult - it&rsquo;s <strong>not</strong> as convenient as just typing</p>
 
@@ -151,7 +151,7 @@
 
 <p><a name="phoenix"></a></p>
 
-<h3 id="phoenix:7debb73c6a3fd6f5aa2c2da8cbce28e8">Phoenix</h3>
+<h3 id="phoenix">Phoenix</h3>
 
 <p>Once you have installed Elixir, it&rsquo;s time to setup Phoenix. This can be done via <code>hex</code>, which in turn can be installed via <code>mix</code>:</p>
 
@@ -167,7 +167,7 @@
 
 <p><a name="lets-go"></a></p>
 
-<h2 id="let-s-go:7debb73c6a3fd6f5aa2c2da8cbce28e8">Let&rsquo;s go</h2>
+<h2 id="let-s-go">Let&rsquo;s go</h2>
 
 <pre><code class="language-bash">mix phoenix.new kitteh
 </code></pre>
@@ -196,7 +196,7 @@
 
 <p><a name="scaffolding"></a></p>
 
-<h2 id="scaffolding:7debb73c6a3fd6f5aa2c2da8cbce28e8">Scaffolding</h2>
+<h2 id="scaffolding">Scaffolding</h2>
 
 <p>Scaffolding is a pretty fast and reliable way in Phoenix to get off the ground. We&rsquo;re not going to use it to its full potential here.</p>
 
@@ -246,7 +246,7 @@
 
 <p><a name="simpler-times"></a></p>
 
-<h2 id="simpler-times:7debb73c6a3fd6f5aa2c2da8cbce28e8">Simpler times</h2>
+<h2 id="simpler-times">Simpler times</h2>
 
 <p>Let&rsquo;s fall back to the already generated <code>PageController</code>. It already has an action <code>index</code> ready to use.</p>
 
@@ -261,7 +261,7 @@
 
 <p><a name="providing-a-frontend"></a></p>
 
-<h2 id="providing-a-frontend:7debb73c6a3fd6f5aa2c2da8cbce28e8">Providing a &ldquo;frontend&rdquo;</h2>
+<h2 id="providing-a-frontend">Providing a &ldquo;frontend&rdquo;</h2>
 
 <p>This should be easy.</p>
 
@@ -299,7 +299,7 @@
 
 <p><a name="new-routes"></a></p>
 
-<h2 id="new-routes:7debb73c6a3fd6f5aa2c2da8cbce28e8">New routes</h2>
+<h2 id="new-routes">New routes</h2>
 
 <p>We defined an <code>/upload</code> path that the form uses, but this route is nowhere to be found. Let&rsquo;s add it:</p>
 
@@ -328,7 +328,7 @@
 
 <p><a name="reading-the-documentation"></a></p>
 
-<h2 id="reading-the-documentation:7debb73c6a3fd6f5aa2c2da8cbce28e8">Reading the documentation</h2>
+<h2 id="reading-the-documentation">Reading the documentation</h2>
 
 <p>Turns out, the Phoenix people do provide something to do file uploads.</p>
 
@@ -388,7 +388,7 @@ mix phoenix.gen.model Image original_name:string url:string size:integer
 
 <p><a name="handle-the-file"></a></p>
 
-<h2 id="handle-the-file:7debb73c6a3fd6f5aa2c2da8cbce28e8">Handle the file</h2>
+<h2 id="handle-the-file">Handle the file</h2>
 
 <p>It&rsquo;s time for some action in the controller, because at the moment our application will crash if we try to submit the form with an image.</p>
 
@@ -491,13 +491,13 @@ end
 
 <p><a name="shortcuts"></a></p>
 
-<h3 id="shortcuts:7debb73c6a3fd6f5aa2c2da8cbce28e8">Shortcuts</h3>
+<h3 id="shortcuts">Shortcuts</h3>
 
 <p>If this is all to much coding and you would like the easy way out, check out the tag <code>04-enable-uploading</code> <a href="https://github.com/floriank/kitteh-phoenix/tree/04-enable-uploading">here</a>.</p>
 
 <p><a name="resizing-images"></a></p>
 
-<h2 id="resizing-images:7debb73c6a3fd6f5aa2c2da8cbce28e8">Resizing images</h2>
+<h2 id="resizing-images">Resizing images</h2>
 
 <p>Remember the image modifiers? Like &ldquo;Tiny&rdquo;, &ldquo;Large&rdquo; and &ldquo;Monstrous&rdquo;? We forgot about those.</p>
 
@@ -505,7 +505,7 @@ end
 
 <p><a name="genserver"></a></p>
 
-<h3 id="genserver:7debb73c6a3fd6f5aa2c2da8cbce28e8">GenServer</h3>
+<h3 id="genserver">GenServer</h3>
 
 <p>In a (newer) Rails environment, we could utilize anything that fulfills the interface of <a href="http://edgeguides.rubyonrails.org/active_job_basics.html">ActiveJob</a>, like an adapter to <a href="http://sidekiq.org/">Sidekiq</a> or the <code>delayed_job</code> <a href="https://github.com/collectiveidea/delayed_job">gem</a> gem. We basically spin up a second OS process to generate the image, regardless of the solution.</p>
 
@@ -540,7 +540,7 @@ end
 
 <p><a name="resizing"></a></p>
 
-<h2 id="resizing:7debb73c6a3fd6f5aa2c2da8cbce28e8">Resizing</h2>
+<h2 id="resizing">Resizing</h2>
 
 <p>Resizing images is something one should probably be too lazy to implement oneself. Enter <code>mogrify</code> - it is <a href="https://github.com/route/mogrify">a wrapper library</a> for ImageMagick, providing us with functions for handling image-resizing.</p>
 
@@ -572,7 +572,7 @@ end
 
 <p><a name="problems-of-the-demo-app"></a></p>
 
-<h2 id="problems-of-the-demo-app:7debb73c6a3fd6f5aa2c2da8cbce28e8">Problems of the demo app</h2>
+<h2 id="problems-of-the-demo-app">Problems of the demo app</h2>
 
 <p>This demo application has quite a few problems, some of them already discussed, some of them a little less obvious:</p>
 
@@ -592,7 +592,7 @@ end
 
 <p><a name="conclusion"></a></p>
 
-<h2 id="conclusion:7debb73c6a3fd6f5aa2c2da8cbce28e8">Conclusion</h2>
+<h2 id="conclusion">Conclusion</h2>
 
 <p><a href="https://floriank.github.io/post/using-phoenix-with-docker-part-3-containerization/">In the next part</a>, we&rsquo;ll finally look into using <code>docker</code> to gain containers for our project and use <code>docker compose</code> to orchestrate our system.</p>
 

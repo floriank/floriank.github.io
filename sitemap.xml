@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes" ?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
-    <loc>https://floriank.github.io/</loc>
-    <lastmod>2016-03-07T12:28:34+01:00</lastmod>
-    <priority>0</priority>
+    <loc>https://floriank.github.io/post/the-steel-industry-file_fdw-and-postgres/</loc>
+    <lastmod>2018-07-12T09:30:30+01:00</lastmod>
   </url>
   
   <url>
@@ -40,6 +40,34 @@
   <url>
     <loc>https://floriank.github.io/post/intro/</loc>
     <lastmod>2016-02-02T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://floriank.github.io/categories/</loc>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>https://floriank.github.io/categories/development/</loc>
+    <lastmod>2018-07-12T09:30:30+01:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>https://floriank.github.io/</loc>
+    <lastmod>2018-07-12T09:30:30+01:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>https://floriank.github.io/post/</loc>
+    <lastmod>2018-07-12T09:30:30+01:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>https://floriank.github.io/tags/</loc>
+    <priority>0</priority>
   </url>
   
 </urlset>

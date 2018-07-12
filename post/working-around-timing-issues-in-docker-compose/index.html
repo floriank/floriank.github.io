@@ -96,7 +96,7 @@
             <div class="post-content">
                 
 
-<h2 id="containers:4cef9258b76593241d6dc5f466abd67c">Containers</h2>
+<h2 id="containers">Containers</h2>
 
 <p>I really like the concept of containers. Having been a somewhat avid <a href="https://vagrantup.com">vagrant</a> user in the past, the speed gain that containers can provide over a virtual machine is a good sell to me. Also, having a very snapshottable environment I can bring up and down with dependencies packed neatly into containers is a plus. If you are reading this article you probably heard the sermon before.</p>
 
@@ -106,7 +106,7 @@
 
 <p>This post will deal with <code>docker</code> and more specifically, <code>docker compose</code>.</p>
 
-<h2 id="setup:4cef9258b76593241d6dc5f466abd67c">Setup</h2>
+<h2 id="setup">Setup</h2>
 
 <p>If you&rsquo;re looking at a bigger project you might need multiple containers to run all the software you need. So, you might end up with a sizable list:</p>
 
@@ -175,7 +175,7 @@ web:
 
 <p>Running <code>docker compose up</code> should start all of these containers. And if you&rsquo;re lucky, you get a running Rails application with PostgreSQL and ElasticSearch servers at its disposal.</p>
 
-<h2 id="timing-problems:4cef9258b76593241d6dc5f466abd67c">Timing Problems</h2>
+<h2 id="timing-problems">Timing Problems</h2>
 
 <p>Since we&rsquo;re not living in a perfect world, there might be some problems with this approach, most notably timing.</p>
 
@@ -185,7 +185,7 @@ web:
 
 <p>There is an ongoing discussion about this problem on <a href="https://github.com/docker/compose/issues/374">Github</a>. So far most solutions revolve around having a custom script wait for the required dependencies to start up and be reachable before actually firing the container command.</p>
 
-<h2 id="workaround:4cef9258b76593241d6dc5f466abd67c">Workaround</h2>
+<h2 id="workaround">Workaround</h2>
 
 <p>I hesitate to call this a solution, but here is my workaround which I used to tackle this problem:</p>
 
@@ -212,13 +212,13 @@ bundle exec rails s -b 0.0.0.0
 
 <p><strong>Note</strong>: <code>docker compose</code> provides the <code>elasticsearch</code> host name conveniently via the <code>links</code> attribute so that you do not have to use overly verbose names taken from the environment anymore. In case you were wondering how the web container knows about the ElasticSearch container.</p>
 
-<h2 id="conclusion:4cef9258b76593241d6dc5f466abd67c">Conclusion</h2>
+<h2 id="conclusion">Conclusion</h2>
 
 <p>This is far from a perfect solution. To start off, a counter could be used to abort once the script queried long enough. It&rsquo;s also dependent on <code>netcat</code> as part of the container, which might be undesirable if you don&rsquo;t want the extra dependency.</p>
 
 <p>I hope this will help in the future, tackling these issues got me stuck for a little bit on the learning curve.</p>
 
-<h2 id="resources:4cef9258b76593241d6dc5f466abd67c">Resources</h2>
+<h2 id="resources">Resources</h2>
 
 <ul>
 <li><code>docker compose</code> <a href="https://docs.docker.com/compose/">Documentation</a></li>
