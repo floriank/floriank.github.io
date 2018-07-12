@@ -367,7 +367,7 @@ WHERE internal.external_id IS NULL
   <img src="https://floriank.github.io/img/import_modules.png" alt="Modules!" />
 </center></p>
 
-<p>We create to modules, one which we&rsquo;ll call <code>SQLModule</code> that will be used to hold functions that run a Query to determine what the changeset looks like and one that will actually execute insert/update/delete the data in our service tables. Let&rsquo;s call that one the <code>ImportModule</code>.</p>
+<p>We create two modules, one which we&rsquo;ll call <code>SQLModule</code> that will be used to hold functions that run a Query to determine what the changeset looks like and one that will actually execute insert/update/delete the data in our service tables. Let&rsquo;s call that one the <code>ImportModule</code>.</p>
 
 <p><strong>Full disclosure</strong>: In the real world, we employ data checking and we actually need to grab data from multiple files into a state that makes sense to use it in the tools we built for our customers. That also means, that reality is usually not as simple as it is and we needed to design more complex queries, joining the data of multiple CSVs together.</p>
 
@@ -380,21 +380,21 @@ WHERE internal.external_id IS NULL
   alias MyService.{Company, Repo}
   alias Synchronize.ImportModule
   alias Ecto.Adapters.SQL
-  
+
   @doc &quot;&quot;&quot;
   the main entrypoint for this module
   &quot;&quot;&quot;
   def sync do
     find_companies() |&gt; run()
   end
-  
+
   @doc &quot;&quot;&quot;
   Starts the import for a given set of companies
   &quot;&quot;&quot;
   def run(companies) do
     ImportModule.execute(companies, &amp;map/1, &amp;import_batch/1)
   end
-  
+
   @doc &quot;&quot;&quot;
   Find missing companies in the services database
   &quot;&quot;&quot;
@@ -441,7 +441,7 @@ end
   &quot;&quot;&quot;
   require Logger
   alias MyService.Repo
-  
+
   @doc &quot;&quot;&quot;
   Starts the import for a given set of billing addresses
   &quot;&quot;&quot;
@@ -502,15 +502,22 @@ end
 
 <p><em>No</em> - while this mechanism is interesting, fast and fun to work with (it&rsquo;s also a great debugging tool for CSV inspection when Excel is just a little to intense to use), the solution has to fit the use case.</p>
 
-<p>In general, you should avoid it, if:
-- you only import once
-- you don&rsquo;t feel comfortable using SQL and have extremely complicated transformations
-- you don&rsquo;t have a stable csv definition
-- you cannot afford to have business logic tied to your database
-The strategy is worth a shot if:
-- you need to compare state of several files and the data you have
-- you need it fast (PostgreSQL COPY is pretty fast)
-- You want to offload more to your database server</p>
+<p>In general, you should avoid it, if:</p>
+
+<ul>
+<li>you only import once</li>
+<li>you don&rsquo;t feel comfortable using SQL and have extremely complicated transformations</li>
+<li>you don&rsquo;t have a stable csv definition</li>
+<li>you cannot afford to have business logic tied to your database</li>
+</ul>
+
+<p>The strategy is worth a shot if:</p>
+
+<ul>
+<li>you need to compare state of several files and the data you have</li>
+<li>you need it fast (PostgreSQLs <code>COPY</code> is pretty fast)</li>
+<li>You want to offload more to your database server</li>
+</ul>
 
 <h1 id="learnings-and-a-repository">Learnings and a repository</h1>
 
