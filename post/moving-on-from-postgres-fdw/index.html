@@ -1,0 +1,425 @@
+<html lang="en">
+<head>
+
+  
+  <meta charset="utf-8">
+  <title>Moving on from postgres_fdw</title>
+  <meta name="description" content="Moving on from postgres_fdw">
+  <meta name="author" content="Florian Kraft">
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="https://floriank.github.io/css/fonts.css">
+  
+  
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
+  
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
+
+  <link rel="stylesheet" href="https://floriank.github.io/css/custom.css">
+
+  
+  
+  <link rel="stylesheet" href="https://floriank.github.io/highlight/styles/default.css">
+  
+  <script src="https://floriank.github.io/highlight/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+</head>
+<body>
+
+
+<div class="header pure-g">
+    <div class="pure-u-1-24 pure-u-md-5-24"></div>
+    <div class="pure-u-11-12 pure-u-md-5-8">
+        <div class="desktop pure-menu pure-menu-horizontal nav-menu">
+            
+            <a href="https://floriank.github.io/" class="site-title pure-menu-heading">Notes of an awful developer</a>
+            <ul class="pure-menu-list">
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/categories/development" class="pure-menu-link">Development</a>
+                </li>
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/about/" class="pure-menu-link">About</a>
+                </li>
+            </ul>
+        </div>
+        <div class="mobile pure-menu nav-menu">
+            <a href="https://floriank.github.io/" class="pure-menu-heading" id="toggle-home">Notes of an awful developer</a>
+            <a href="#" id="toggle-btn">&#9776;</a>
+            <ul class="pure-menu-list" id="toggle-content" style="display:none;">
+                
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/categories/development" class="pure-menu-link">Development</a>
+                </li>
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/about" class="pure-menu-link">About</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="pure-u-1-24 pure-u-md-1-6"></div>
+</div>
+
+
+<div class="pure-g">
+    <div class="pure-u-1-24 pure-u-md-5-24"></div>
+	<div class="pure-u-11-12 pure-u-md-5-8">
+        <div class="post">
+
+            <div class="post-title">
+                <p class="footnote">
+                    <time class="">2019-04-03</time>
+		            
+                    
+                    |
+                    
+                    
+
+                    
+                    categories:<a href="https://floriank.github.io/categories/development">development</a> 
+                    
+
+                    
+                </p>
+                <h1>Moving on from postgres_fdw</h1>
+            </div>
+
+            <div class="post-content">
+                
+
+<h1 id="revising-the-things-you-have-done">Revising the things you have done</h1>
+
+<p>I sometimes go back and look at old code - it&rsquo;s a mostly cathartic, as it brings one back down to earth. As software developers we have a certain aptitude for documenting our code in tests (or actual self-documenting API specifications, e.g. using GraphQL), but we omit the power of documenting the decision making behind it.</p>
+
+<p>I am no exception to this - which is why I look at old code like an interesting puzzle and try to reason with my past self about what he has been thinking during that time. It sure makes for a lot of WTF-moments, but it also shows that one has (hopefully) grown a bit.</p>
+
+<h1 id="listening-to-others">Listening to others</h1>
+
+<p>I wrote the post &ldquo;<a href="https://floriank.github.io/post/the-steel-industry-file_fdw-and-postgres/">The steel industry, file_fdw and the synchronisation of data</a>&rdquo; in the full self-belief that I had an absolute solution to a very hard problem.</p>
+
+<p>And at the time, it was good.</p>
+
+<p>I wrote the post accompanying a talk I gave at a meet up of the <a href="https://www.meetup.com/Elixir-Berlin/">most excellent Elixir Berlin group</a>. I think I might have even apologized for focusing more on databases than on Elixir in this one.</p>
+
+<p>As is customary, I gave the word to the crowd to ask questions - and I had a developer (with magnificently flowing, long hair) stand up amidst the group, pointing out the following:</p>
+
+<ul>
+<li>I should absolutely partake in the meetings of the local PostgreSQL user group</li>
+<li>Why could I not just execute <code>COPY</code> directly instead of keeping <code>file_fdw</code> around for creating the foreign tables?</li>
+</ul>
+
+<p>My reaction to the first one: Yes.</p>
+
+<p>My reaction to the second one: Ye&hellip;but, erm. Drowning in the rush of endorphines after entertaining a group of people for forty minutes, I think, in retrospect, I might have been dismissive.</p>
+
+<p>I should not have been.</p>
+
+<h1 id="the-more-experience-you-have">The more experience you have &hellip;</h1>
+
+<p>As I grow as a developer, I accumulate more knowledge about my work and about relationships to others. I also grow more ignorant in certain aspects. Thankfully, I also become more aware of what little I know about stuff. <a href="https://www.wikiwand.com/en/Impostor_syndrome">Impostor syndrome</a> is something I see a lot in myself and I see in a ton of candidates when interviewing, but this post is not about the impostor I might feel like (as there are a plethora of blog posts you can read about that).</p>
+
+<p>I consider myself a technology leader - this post therefore needs to aim at what it means reflecting from a higher position, specifically dismissing points by people you might perceive as less smart or experienced. How you see errors in your own behavior before throwing out potential solutions might save you money some day. This is a common error I also see in some old school managers that straight up refuse feedback or a view too different from their own, but ranting about them might need a post of its own.</p>
+
+<h1 id="the-harder-you-fall">.. the harder you fall.</h1>
+
+<p>What did I miss completely in just flat out dismissing the opinion of the developer?</p>
+
+<p>Well, for one thing - that they were <strong>just straight up right about everything</strong>. The argument was for less complexity in a complex system. Consider the things you need do to make my initial setup work:</p>
+
+<ul>
+<li>setup a database (container)
+
+<ul>
+<li>that needs access to the CSV files</li>
+<li>that need to run PostgreSQL with the <code>postgres_fdw</code> extension</li>
+</ul></li>
+<li>setup an application (container)
+
+<ul>
+<li>that needs access to the timestamp lock file, next to the CSVs</li>
+</ul></li>
+</ul>
+
+<p>Consider what you need to do it with PostgreSQLs <code>COPY</code> statement:</p>
+
+<ul>
+<li>a PostgreSQL database</li>
+<li>an application
+
+<ul>
+<li>that needs access to the file system hosting the CSV and the timestamp file</li>
+</ul></li>
+</ul>
+
+<p>Can you see the difference?</p>
+
+<p>The main error I made was that I only considered my own position. Had I acted with empathy (and common sense), I might have realized that almost no one in the world hosts their own databases. Since Heroku has been around for a while now and with companies such as Google offering cloud-based versions of PostgreSQL, not even my own team hosts their own database anymore!</p>
+
+<p>Also, less dependencies should be viewed as &ldquo;less liabilities&rdquo;, instead of &ldquo;more freedom&rdquo; to manage!</p>
+
+<p>Fudge.</p>
+
+<h1 id="the-problem">The problem</h1>
+
+<p>Cloud-based PostgreSQL comes with a ton of goodies, namely that you can skip all the configuration and scaling issues.</p>
+
+<p>It also does not provide any extensions. Extensions you might want, like, let&rsquo;s say <code>postgres_fdw</code>. In short, if you want to go with the <code>postgres_fdw</code> based solution, you cannot make the original solution work on a cloud provider, as you have no option to enable the extension - and you also have no way to make the database aware of the files.</p>
+
+<p>And you better think fast of a solution, as your company wants to make a run for the cloud, as it&rsquo;s the future<sup>tm</sup>!</p>
+
+<h1 id="what-to-do-now">What to do now?</h1>
+
+<p>Well, let&rsquo;s revisit the suggestion with the <a href="https://www.postgresql.org/docs/11/sql-copy.html"><code>COPY</code></a> statement:</p>
+
+<blockquote>
+<p>COPY moves data between PostgreSQL tables and standard file-system files. COPY TO copies the contents of a table to a file, while COPY FROM copies data from a file to a table (appending the data to whatever is in the table already). COPY TO can also copy the results of a SELECT query.</p>
+</blockquote>
+
+<p>Awesome, but we used that strategy with <code>file_fdw</code> as well. Consider this migration:</p>
+
+<pre><code class="language-elixir">defmodule SynchronizeApp.Repo.Migrations.AddForeignCompaniesTable do
+  use Ecto.Migration
+  @up ~s&quot;&quot;&quot;
+    CREATE FOREIGN TABLE external_companies (
+      company_id text,
+      -- ...
+    ) SERVER file_server
+    OPTIONS ( filename '/files/Company.csv', format 'csv', delimiter '|', header 'on', quote E'\x01');
+  &quot;&quot;&quot;
+# [...]
+</code></pre>
+
+<p>We used the foreign table specification to tell PostgreSQL how to form a table based off of a CSV file. That meant that the database itself needed to know about the file and it&rsquo;s structure, making migrations hard and causing other fun headaches at runtime when another process touches the files.</p>
+
+<p>But we can use all of the magic with PostgreSQLs <code>COPY</code> statement.</p>
+
+<h1 id="the-magic-of-stdin">The magic of STDIN</h1>
+
+<p><code>COPY</code> supports a <code>... FROM STDIN</code> syntax that is documented as follows:</p>
+
+<blockquote>
+<p>Specifies that input comes from the client application.</p>
+</blockquote>
+
+<p>Cool, so what would that look like?</p>
+
+<pre><code>COPY animals (
+  species,
+  name,
+  chip_id
+) FROM STDIN (FORMAT csv, HEADER TRUE, DELIMITER '|', NULL '', quote E'\x01')
+</code></pre>
+
+<p>Of course, we imagine a data source that is similarly shaped as the example from the original post:</p>
+
+<pre><code class="language-sql">species|name|chip_id
+dog|Snuffles|4553-1338
+cat|Archibald &quot;The Paw&quot;|999-9993
+guinea|Porkchop|1337-9112
+</code></pre>
+
+<p>As you might now, encountering RFC-compliant CSV in the wild is rare, so we go with a nonstandard example.</p>
+
+<p>Things to look out for:</p>
+
+<ul>
+<li><code>COPY</code> is very strict when it comes to order: the column definition in the statement needs to match the columns in the file</li>
+<li>Your statement will blow up in your face when it encounters an error</li>
+<li>The statement <code>HEADER TRUE</code> will literally just skip the first row</li>
+<li><code>STDIN</code> can be fed from your application code directly</li>
+</ul>
+
+<h1 id="feeding-data-into-stdin">Feeding data into STDIN</h1>
+
+<p>So far, this is not really existing as it will not help us sitting on a <a href="https://github.com/floriank/postgres_sync_file_fdw">big ol&rsquo; Elixir application</a>, as we have no way of actually feeding the <code>STDIN</code> here efficiently. And rewriting everything from scratch might not be the thing you feel like doing (unless you find yourself with unlimited resources and time).</p>
+
+<p>The way we can make this work is by combing the SQL statement from above with something called &ldquo;streams&rdquo; in Elixir. If you have never heard about streams, it&rsquo;s time <a href="https://elixir-lang.org/getting-started/enumerables-and-streams.html">to read up on them</a>. For now, if you don&rsquo;t have the time, think of <code>Stream</code> as a lazily operating <code>Enum</code>.</p>
+
+<p>there is a really nice article over at <a href="https://www.poeticoding.com/processing-large-csv-files-with-elixir-streams/">poeticoding</a> about how one can use streams to process larger CSV files, which is a good read of its own.</p>
+
+<p>Anyway, let&rsquo;s consider a simple CSV reading module:</p>
+
+<pre><code class="language-elixir">defmodule CSVStreamer do
+  def stream(path) do
+    path |&gt; File.stream!()
+  end
+end
+</code></pre>
+
+<p>All this will do is just read a path and open up a stream with the data. We&rsquo;ll not doing anything with that stream yet, so it has just a small cost attached - and we&rsquo;re far away from loading a potentially large CSV into memory.</p>
+
+<p>Now, it turns out, Elixirs <code>Ecto</code> library <a href="https://hexdocs.pm/ecto_sql/Ecto.Adapters.SQL.html#stream/4">also supports streaming</a>. It allow us to use a Repo and a statement parametrized  statement to be lazily evaluated:</p>
+
+<pre><code class="language-elixir">defmodule SQLStreamer do
+  alias Ecto.Adapters.SQL
+  alias MainApplication.Repo
+
+  def stream(statement) do
+    Repo |&gt; SQL.stream(statement)
+  end
+end
+</code></pre>
+
+<p>Nice, but useless for the moment. We now have a lazy file read and a lazy sql statement executor. What is missing is a good combination of the two. Thankfully, there is <a href="https://hexdocs.pm/elixir/Enum.html#into/2"><code>Enum.into</code></a>, which can combine the two. As the docs say:</p>
+
+<blockquote>
+<p>Inserts the given enumerable into a collectable.</p>
+</blockquote>
+
+<p>That means, if we have two streams, we can effectively combine the out of one into the input of the other:</p>
+
+<pre><code class="language-elixir">defmodule Combiner do
+  @path &quot;/files/animals.csv&quot;
+  @copy_sql &quot;&quot;&quot;
+    COPY animals (
+      species,
+      name,
+      chip_id
+    ) FROM STDIN (FORMAT csv, HEADER TRUE, DELIMITER '|', NULL '', quote E'\x01')
+  &quot;&quot;&quot;
+  def combine do
+    file_stream = CSVStreamer.stream(@path)
+    sql_stream = SQLStreamer.stream(@copy_sql)
+
+    file_stream |&gt; Enum.into(sql_stream)
+  end
+end
+</code></pre>
+
+<p>And that&rsquo;s it! It will spectacularly fail: Ecto wants a transaction for things like this in order to work, so we will oblige here:</p>
+
+<pre><code class="language-elixir">defmodule Combiner do
+  alias MainApplication.Repo
+  @path &quot;/files/animals.csv&quot;
+  @copy_sql &quot;&quot;&quot;
+    COPY animals (
+      species,
+      name,
+      chip_id
+    ) FROM STDIN (FORMAT csv, HEADER TRUE, DELIMITER '|', NULL '', quote E'\x01')
+  &quot;&quot;&quot;
+  def combine do
+    file_stream = CSVStreamer.stream(@path)
+    sql_stream = SQLStreamer.stream(@copy_sql)
+
+    Repo.transaction(fn -&gt;
+      file_stream |&gt; Enum.into(sql_stream)
+    end)
+  end
+end
+</code></pre>
+
+<p>If you check out the <code>animals table</code> after executing <code>Combiner.combine/0</code> you will find the data from the CSV in the table!</p>
+
+<p><strong>Success</strong>!</p>
+
+<p>Now, you will also find that the data will be appended each time you execute the function, which is probably what you don&rsquo;t want. the original functionality was designed to actually synchronize the table with the data from the CSV. We can achieve that by adding a truncate before running our copy statement:</p>
+
+<pre><code class="language-elixir">  # [...]
+  def combine do
+    file_stream = CSVStreamer.stream(@path)
+    sql_stream = SQLStreamer.stream(@copy_sql)
+
+    Repo.transaction(fn -&gt;
+      Repo.query(&quot;TRUNCATE animals;&quot;)
+      file_stream |&gt; Enum.into(sql_stream)
+    end)
+  end
+</code></pre>
+
+<p>We can now bind the new function to the original file trigger and it should replace the <code>file_fdw</code> based approach completely - we have a full table copy of the data in the CSV.</p>
+
+<h1 id="what-to-take-from-this-example">What to take from this example</h1>
+
+<p>Well, I am glad somebody pointed out my overcomplicated thinking. However, it took a while to see what the benefits could have been. Thankfully, there was a technical solution to this particular problem, which came at the cost of additional time invested.</p>
+
+<p>I compiled a <a href="https://github.com/floriank/postgres_sync_copy">full repository</a> to see the thing work. I really hope this example demonstrates both an interesting technical detail as well as some insights on what to do as a tech lead in todays software development world.</p>
+
+<p>Lastly, thanks to the unknown developer who called me out.</p>
+
+<p>You da real MVP.</p>
+
+            </div>
+        </div>
+	</div>
+    <div class="pure-u-1-24 pure-u-md-1-6"></div>
+</div>
+
+<div class="footer pure-g">
+    <div class="pure-u-1-24 pure-u-md-5-24"></div>
+    <div class="pure-u-11-12 pure-u-md-5-8">
+        <div class="pure-menu pure-menu-horizontal footer-content">
+            <ul>
+                <li class="pure-menu-heading" id="foot-name">Florian Kraft:</li>
+
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://github.com/floriank" class="pure-menu-link">GitHub</a>
+                </li>
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://www.linkedin.com/in/floriankraft" class="pure-menu-link">LinkedIn</a>
+                </li>
+                
+
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://twitter.com/carhillion" class="pure-menu-link">Twitter</a>
+                </li>
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://stackoverflow.com/users/498226/florian" class="pure-menu-link">Stack Overflow</a>
+                </li>
+                
+                <li class="pure-menu-item right">
+                  <a class="pure-menu-link" href="https://github.com/gizak/nofancy/">Theme based on the most excellent nofancy theme</a>
+                </li>
+            </ul>
+            <a href="#" class="pure-menu-heading pull-right" id="gototop-btn">↑↑</a>
+        </div>
+	  </div>
+      <div class="pure-u-1-24 pure-u-md-1-6"></div>
+</div>
+
+
+<script src="https://floriank.github.io/js/jquery.min.js" type="text/javascript"></script>
+<script src="https://floriank.github.io/js/jquery.timeago.js" type="text/javascript"></script>
+<script type="text/javascript">
+  $(function(){
+    $("time.timeago").timeago();
+  })
+  $("#toggle-btn").click(function(){
+    $("#toggle-content").toggle();
+    if($(this).html() === "☰") {
+        $(this).html("X")
+    } else {
+        $(this).html("☰")
+    }
+  });
+  $(window).resize(function(){
+    if(window.innerWidth > 768) {
+      $(".desktop").removeAttr("style");
+    }
+  });
+</script>
+
+</body>
+</html>
+

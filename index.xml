@@ -6,10 +6,20 @@
     <description>Recent content on Notes of an awful developer</description>
     <generator>Hugo -- gohugo.io</generator>
     <copyright>(c) 2016 Florian Kraft</copyright>
-    <lastBuildDate>Thu, 12 Jul 2018 09:30:30 +0100</lastBuildDate>
+    <lastBuildDate>Wed, 03 Apr 2019 09:30:30 +0100</lastBuildDate>
     
 	<atom:link href="https://floriank.github.io/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Moving on from postgres_fdw</title>
+      <link>https://floriank.github.io/post/moving-on-from-postgres-fdw/</link>
+      <pubDate>Wed, 03 Apr 2019 09:30:30 +0100</pubDate>
+      
+      <guid>https://floriank.github.io/post/moving-on-from-postgres-fdw/</guid>
+      <description>Revising the things you have done I sometimes go back and look at old code - it&amp;rsquo;s a mostly cathartic, as it brings one back down to earth. As software developers we have a certain aptitude for documenting our code in tests (or actual self-documenting API specifications, e.g. using GraphQL), but we omit the power of documenting the decision making behind it.
+I am no exception to this - which is why I look at old code like an interesting puzzle and try to reason with my past self about what he has been thinking during that time.</description>
+    </item>
     
     <item>
       <title>The steel industry, file_fdw and the synchronisation of data</title>
@@ -93,7 +103,8 @@ If you did not hear the good word yet - read up on it.</description>
       <guid>https://floriank.github.io/post/intro/</guid>
       <description>First post hype!
 Erm. Not really. This is a first post to be made, but it contains nothing of interest really.
-I always wanted a blog to share my world view and my opinion with a world that probably could not care less about both of them - considering the sheer mass of blogs and opinions, tweets, facebook pages, likes, upvotes, kitty videos, doge videos and similar currently in existance.</description>
+I always wanted a blog to share my world view and my opinion with a world that probably could not care less about both of them - considering the mass of blogs and opinions, tweets, Facebook pages, likes, upvotes, kitty videos, doge videos and similar currently in existence.
+Nevertheless, I hope you can find something useful to you here in the future.</description>
     </item>
     
   </channel>
