@@ -1,0 +1,342 @@
+<html lang="en">
+<head>
+
+  
+  <meta charset="utf-8">
+  <title>Uploading files using Relay Modern and a GraphQL API made with Absinthe</title>
+  <meta name="description" content="Uploading files using Relay Modern and a GraphQL API made with Absinthe">
+  <meta name="author" content="Florian Kraft">
+
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="https://floriank.github.io/css/fonts.css">
+  
+  
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/pure-min.css">
+  
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.6.0/grids-responsive-min.css">
+
+  <link rel="stylesheet" href="https://floriank.github.io/css/custom.css">
+
+  
+  
+  <link rel="stylesheet" href="https://floriank.github.io/highlight/styles/default.css">
+  
+  <script src="https://floriank.github.io/highlight/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+
+</head>
+<body>
+
+
+<div class="header pure-g">
+    <div class="pure-u-1-24 pure-u-md-5-24"></div>
+    <div class="pure-u-11-12 pure-u-md-5-8">
+        <div class="desktop pure-menu pure-menu-horizontal nav-menu">
+            
+            <a href="https://floriank.github.io/" class="site-title pure-menu-heading">Notes of an awful developer</a>
+            <ul class="pure-menu-list">
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/categories/development" class="pure-menu-link">Development</a>
+                </li>
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/about/" class="pure-menu-link">About</a>
+                </li>
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/imprint/" class="pure-menu-link">Imprint</a>
+                </li>
+            </ul>
+        </div>
+        <div class="mobile pure-menu nav-menu">
+            <a href="https://floriank.github.io/" class="pure-menu-heading" id="toggle-home">Notes of an awful developer</a>
+            <a href="#" id="toggle-btn">&#9776;</a>
+            <ul class="pure-menu-list" id="toggle-content" style="display:none;">
+                
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/categories/development" class="pure-menu-link">Development</a>
+                </li>
+                
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/about" class="pure-menu-link">About</a>
+                </li>
+                <li class="pure-menu-item">
+                    <a href="https://floriank.github.io/imprint" class="pure-menu-link">Imprint</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="pure-u-1-24 pure-u-md-1-6"></div>
+</div>
+
+
+<div class="pure-g">
+    <div class="pure-u-1-24 pure-u-md-5-24"></div>
+	<div class="pure-u-11-12 pure-u-md-5-8">
+        <div class="post">
+
+            <div class="post-title">
+                <p class="footnote">
+                    <time class="">2019-05-03</time>
+		            
+                    
+                    |
+                    
+                    
+
+                    
+                    categories:<a href="https://floriank.github.io/categories/development">development</a> 
+                    
+
+                    
+                </p>
+                <h1>Uploading files using Relay Modern and a GraphQL API made with Absinthe</h1>
+            </div>
+
+            <div class="post-content">
+                
+
+<p>Since I&rsquo;ve decided to finally give the <a href="https://typescriptlang.org">TypeScript</a>/<a href="https://reactjs.org">React</a> combo a spin, I have to admit that it&rsquo;s come quite far since I&rsquo;ve last tried it in 2016.</p>
+
+<h1 id="making-things-overly-complex">Making things overly complex</h1>
+
+<p>I had decided to build a prototype for a friend - so naturally I thought of the most complex architecture and implementation and then threw it out immediately.</p>
+
+<p>Taking what I&rsquo;ve learned, I decided to move the client application together with the backend and threw out the JSON API entirely. If I learned anything so far about architecture, it&rsquo;s that complexity early on feasts off your tears.</p>
+
+<h1 id="relay-and-graphql">Relay and GraphQL</h1>
+
+<p>When researching the mode of communication between backend and frontend I made a decision for GraphQL - mostly out of interest, but also because we had good experiences with it during my last bigger project at work. The implementation in Elixir is pretty straight forward using the most excellent <a href="https://github.com/absinthe-graphql/absinthe">absinthe</a> package, which even has custom helpers for <a href="https://facebook.github.io/relay">relay</a>.</p>
+
+<h1 id="file-uploads">File uploads</h1>
+
+<p>I won&rsquo;t describe how to exactly build a GraphQL powered application frontend and backend-wise. I will add an example project (<a href="https://github.com/floriank/react_relay_kitten_uploader">just give me the code already!</a>) to this post where you can check out how I did it - and of course remind you that there is always more than one way to skin a &hellip; well, cat.</p>
+
+<p>On thing in particular that I found a bit bumpy to deal with was file uploading in this particular combination of technologies.</p>
+
+<p>The <a href="https://hexdocs.pm/absinthe/Absinthe.html">absinthe docs</a> have a <a href="https://hexdocs.pm/absinthe/file-uploads.html#content">whole page</a> of describing what to look out for when dealing with file uploads.</p>
+
+<p>The nice thing is this:</p>
+
+<blockquote>
+<p>By treating uploads as regular arguments we get all the usual GraphQL argument benefits (such as validation and documentation)—-which we wouldn’t get if we were merely putting them in the context as in other implementations.</p>
+</blockquote>
+
+<p>The upload is just another field in the schema of <code>type Upload</code>. If you look at a simple type in GraphQL:</p>
+
+<pre><code class="language-graphql">type Kitten {
+  id: ID
+  name: String
+  image: Upload
+}
+</code></pre>
+
+<p>You can see that this is treated indifferent from any other piece of data. Which is great.</p>
+
+<p><em>Quick hint</em>: to get the <code>Upload</code> type:</p>
+
+<pre><code class="language-elixir"># lib/my_app_web/schema.ex
+# [...]
+  import_types Absinthe.Plug.Types
+</code></pre>
+
+<p>Unfortunately, this is where the docs kind of stop with a note saying that relay is in need of having some documentation added. We&rsquo;ll get to that.</p>
+
+<h1 id="formdata-vs-post-body">FormData vs. POST body</h1>
+
+<p>Usually, when communicating with a GraphQL based API, you continuously reuse the same entry point and every request will have the form of</p>
+
+<pre><code>POST /api/graph  
+</code></pre>
+
+<p>When using absinthe, the body for this request should take the following form:</p>
+
+<pre><code>{ 
+  operation: &quot;&lt;The text of your query&gt;&quot;,
+  variables: {}
+}
+</code></pre>
+
+<p>In our case, uploading an image would be a mutation that we can implement on the schema using the <a href="https://hexdocs.pm/absinthe_relay/Absinthe.Relay.html"><code>Absinthe.Relay.Mutation.Notation.Modern</code> module that absinthe</a> provides, like this:</p>
+
+<pre><code class="language-elixir"># in ./lib/your_app_web/schema.ex
+mutation do 
+  @desc &quot;Create a new kitten, awww *_*&quot;
+  payload field :new_kitten do
+    @desc &quot;Input for a new kitten&quot;
+    input do
+      @desc &quot;The photo of the kitten&quot;
+      field(:card_image, non_null(:upload))
+
+      @desc &quot;The name of the kitten&quot;
+      field(:name, non_null(:string))
+    end
+
+    output do
+      @desc &quot;The newly created kitten&quot;
+      field :kitten, :kitten
+    end
+
+    resolve(&amp;Resolvers.Kitten.create_kitten/3)
+  end
+end
+</code></pre>
+
+<p>In this case we have to understand that the <a href="https://facebook.github.io/relay/docs/en/mutations.html">relay specifies input types</a> for a given mutation, the reason being that the input object can be individually validated apart from the actual data (in this case, <code>Kitten</code> is the type and absinthe provides us with <code>NewKittenInput</code>) object. The absinthe notation provides a convenient syntax here.</p>
+
+<h2 id="what-does-the-request-look-like">What does the request look like?</h2>
+
+<p>We cannot use the same request for uploading files - we need to rely on <code>FormData</code> to actually construct a request to the server that uses the same mechanism as submitting a regular form.</p>
+
+<p>In the case of absinthe, the library expects the following form for a FormData request:</p>
+
+<pre><code>query: &quot;
+  mutation CreateKittenMutation($input: KittenInput!) {
+    newKitten(input: $input) {
+      kitten {
+        id
+        name
+      }
+    }
+  }
+&quot;
+variables: &quot;{\&quot;input\&quot;: { \&quot;name\&quot;: \&quot;Noodlez\&quot;, image: \&quot;kitten\&quot; }}&quot;
+kitten: &lt;binary&gt;
+</code></pre>
+
+<p>Note that the field value for <code>image</code> is the string <code>&quot;kitten&quot;</code>, which matches a field in the form data.</p>
+
+<p>I actually had to read a bit into the library and compare with the <a href="https://github.com/jaydenseric/apollo-upload-client">implementation for apollo</a> referenced in the docs.</p>
+
+<p>Credit where Credit is due, I also found a very, very nice implementation to deal with uploadables in react-relay-network-modern - <a href="https://github.com/relay-tools/react-relay-network-modern/issues/41#issuecomment-468646856">https://github.com/relay-tools/react-relay-network-modern/issues/41</a>, however, this only works for the <a href="https://github.com/jaydenseric/graphql-upload">reference middleware implemenation</a> in node.js.</p>
+
+<p>The trick here is to check the request for attached <code>uploadables</code> and then transform the request so that it matches the form absinthe expects.</p>
+
+<p>Using react-relay-network-modern, the middleware for a simple request with one image might look like this:</p>
+
+<pre><code class="language-typescript">const multipartRequestMiddleware = next =&gt; async (req) =&gt; {
+  let {
+    id, operation: { text: query }, variables, uploadables,
+  } = req
+
+  if (uploadables) {
+    let formData = new FormData();
+    formData.append('query', query);
+
+    // this is the hacky version, the version used int he project is a bit more flexible
+    let formDataKey = &quot;kitten&quot;
+    variables.input.image = formDataKey
+
+    formData.append('variables', JSON.stringify(variables));
+    formData.append(formDataKey, uploadables.kitten)
+
+    req.fetchOpts.body = formData
+  }
+  const res = await next(req)
+  return res
+}
+
+export default multipartRequestMiddleware
+</code></pre>
+
+<p>The solution is similar if you&rsquo;re relying on just <a href="https://facebook.github.io/relay/docs/en/quick-start-guide.html#relay-environment">using custom <code>fetch</code> call inside your relay environment</a>.</p>
+
+<h2 id="multiple-images">Multiple images?</h2>
+
+<p>So what if we had multiple images? After all, one can never have too many kitten pictures uploaded to a backend.</p>
+
+<p>Well, at the moment, I could not find a good way to batch upload images with Absinthe, which is unfortunate, but this will hopefully change in the future.</p>
+
+<p>I&rsquo;ll probably try to implement the <a href="https://github.com/jaydenseric/graphql-multipart-request-spec">GraphQL Multipart request spec</a> if I have the time to do so.</p>
+
+<h1 id="provided-project">Provided project</h1>
+
+<p>I&rsquo;ve prepared <a href="https://github.com/floriank/react_relay_kitten_uploader">a project where I built a small uploader application</a> for the interested reader to inspect.</p>
+
+<p>After all, since absinthe is thankfully open source, it&rsquo;s time to think about finding a better way to upload multiple images.</p>
+
+<p>I hope this article provided some insights into the mechanics of uploading files through a GraphQL powered API.</p>
+
+<p>If you have any questions, just send me an email, or open an issue on the project provided.</p>
+
+            </div>
+        </div>
+	</div>
+    <div class="pure-u-1-24 pure-u-md-1-6"></div>
+</div>
+
+<div class="footer pure-g">
+    <div class="pure-u-1-24 pure-u-md-5-24"></div>
+    <div class="pure-u-11-12 pure-u-md-5-8">
+        <div class="pure-menu pure-menu-horizontal footer-content">
+            <ul>
+                <li class="pure-menu-heading" id="foot-name">Florian Kraft:</li>
+
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://github.com/floriank" class="pure-menu-link">GitHub</a>
+                </li>
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://www.linkedin.com/in/floriankraft" class="pure-menu-link">LinkedIn</a>
+                </li>
+                
+
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://twitter.com/carhillion" class="pure-menu-link">Twitter</a>
+                </li>
+                
+
+                
+                <li class="pure-menu-item">
+                    <a href="https://stackoverflow.com/users/498226/florian" class="pure-menu-link">Stack Overflow</a>
+                </li>
+                
+                <li class="pure-menu-item right">
+                  <a class="pure-menu-link" href="https://github.com/gizak/nofancy/">Theme based on the most excellent nofancy theme</a>
+                </li>
+            </ul>
+            <a href="#" class="pure-menu-heading pull-right" id="gototop-btn">↑↑</a>
+        </div>
+	  </div>
+      <div class="pure-u-1-24 pure-u-md-1-6"></div>
+</div>
+
+
+<script src="https://floriank.github.io/js/jquery.min.js" type="text/javascript"></script>
+<script src="https://floriank.github.io/js/jquery.timeago.js" type="text/javascript"></script>
+<script type="text/javascript">
+  $(function(){
+    $("time.timeago").timeago();
+  })
+  $("#toggle-btn").click(function(){
+    $("#toggle-content").toggle();
+    if($(this).html() === "☰") {
+        $(this).html("X")
+    } else {
+        $(this).html("☰")
+    }
+  });
+  $(window).resize(function(){
+    if(window.innerWidth > 768) {
+      $(".desktop").removeAttr("style");
+    }
+  });
+</script>
+
+</body>
+</html>
+

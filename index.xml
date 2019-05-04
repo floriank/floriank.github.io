@@ -6,10 +6,21 @@
     <description>Recent content on Notes of an awful developer</description>
     <generator>Hugo -- gohugo.io</generator>
     <copyright>(c) 2016 Florian Kraft</copyright>
-    <lastBuildDate>Wed, 03 Apr 2019 09:30:30 +0100</lastBuildDate>
+    <lastBuildDate>Fri, 03 May 2019 09:30:30 +0100</lastBuildDate>
     
 	<atom:link href="https://floriank.github.io/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Uploading files using Relay Modern and a GraphQL API made with Absinthe</title>
+      <link>https://floriank.github.io/post/uploading-files-relay-graphql-absinthe/</link>
+      <pubDate>Fri, 03 May 2019 09:30:30 +0100</pubDate>
+      
+      <guid>https://floriank.github.io/post/uploading-files-relay-graphql-absinthe/</guid>
+      <description>Since I&amp;rsquo;ve decided to finally give the TypeScript/React combo a spin, I have to admit that it&amp;rsquo;s come quite far since I&amp;rsquo;ve last tried it in 2016.
+Making things overly complex I had decided to build a prototype for a friend - so naturally I thought of the most complex architecture and implementation and then threw it out immediately.
+Taking what I&amp;rsquo;ve learned, I decided to move the client application together with the backend and threw out the JSON API entirely.</description>
+    </item>
     
     <item>
       <title>Moving on from postgres_fdw</title>

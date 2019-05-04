@@ -3,6 +3,11 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>https://floriank.github.io/post/uploading-files-relay-graphql-absinthe/</loc>
+    <lastmod>2019-05-03T09:30:30+01:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://floriank.github.io/post/moving-on-from-postgres-fdw/</loc>
     <lastmod>2019-04-03T09:30:30+01:00</lastmod>
   </url>
@@ -59,19 +64,19 @@
   
   <url>
     <loc>https://floriank.github.io/categories/development/</loc>
-    <lastmod>2019-04-03T09:30:30+01:00</lastmod>
+    <lastmod>2019-05-03T09:30:30+01:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>https://floriank.github.io/</loc>
-    <lastmod>2019-04-03T09:30:30+01:00</lastmod>
+    <lastmod>2019-05-03T09:30:30+01:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>https://floriank.github.io/post/</loc>
-    <lastmod>2019-04-03T09:30:30+01:00</lastmod>
+    <lastmod>2019-05-03T09:30:30+01:00</lastmod>
     <priority>0</priority>
   </url>
   
