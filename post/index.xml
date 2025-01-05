@@ -1,113 +1,76 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Posts on Notes of an awful developer</title>
     <link>https://floriank.github.io/post/</link>
     <description>Recent content in Posts on Notes of an awful developer</description>
-    <generator>Hugo -- gohugo.io</generator>
+    <generator>Hugo</generator>
+    <language>en</language>
     <copyright>(c) 2016 Florian Kraft</copyright>
     <lastBuildDate>Fri, 03 May 2019 09:30:30 +0100</lastBuildDate>
-    
-	<atom:link href="https://floriank.github.io/post/index.xml" rel="self" type="application/rss+xml" />
-    
-    
+    <atom:link href="https://floriank.github.io/post/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Uploading files using Relay Modern and a GraphQL API made with Absinthe</title>
       <link>https://floriank.github.io/post/uploading-files-relay-graphql-absinthe/</link>
       <pubDate>Fri, 03 May 2019 09:30:30 +0100</pubDate>
-      
       <guid>https://floriank.github.io/post/uploading-files-relay-graphql-absinthe/</guid>
-      <description>Since I&amp;rsquo;ve decided to finally give the TypeScript/React combo a spin, I have to admit that it&amp;rsquo;s come quite far since I&amp;rsquo;ve last tried it in 2016.
-Making things overly complex I had decided to build a prototype for a friend - so naturally I thought of the most complex architecture and implementation and then threw it out immediately.
-Taking what I&amp;rsquo;ve learned, I decided to move the client application together with the backend and threw out the JSON API entirely.</description>
+      <description>Since I&amp;rsquo;ve decided to finally give the TypeScript/React combo a spin, I have to admit that it&amp;rsquo;s come quite far since I&amp;rsquo;ve last tried it in 2016.&#xA;Making things overly complex I had decided to build a prototype for a friend - so naturally I thought of the most complex architecture and implementation and then threw it out immediately.&#xA;Taking what I&amp;rsquo;ve learned, I decided to move the client application together with the backend and threw out the JSON API entirely.</description>
     </item>
-    
     <item>
       <title>Moving on from postgres_fdw</title>
       <link>https://floriank.github.io/post/moving-on-from-postgres-fdw/</link>
       <pubDate>Wed, 03 Apr 2019 09:30:30 +0100</pubDate>
-      
       <guid>https://floriank.github.io/post/moving-on-from-postgres-fdw/</guid>
-      <description>Revising the things you have done I sometimes go back and look at old code - it&amp;rsquo;s a mostly cathartic, as it brings one back down to earth. As software developers we have a certain aptitude for documenting our code in tests (or actual self-documenting API specifications, e.g. using GraphQL), but we omit the power of documenting the decision making behind it.
-I am no exception to this - which is why I look at old code like an interesting puzzle and try to reason with my past self about what he has been thinking during that time.</description>
+      <description>Revising the things you have done I sometimes go back and look at old code - it&amp;rsquo;s a mostly cathartic, as it brings one back down to earth. As software developers we have a certain aptitude for documenting our code in tests (or actual self-documenting API specifications, e.g. using GraphQL), but we omit the power of documenting the decision making behind it.&#xA;I am no exception to this - which is why I look at old code like an interesting puzzle and try to reason with my past self about what he has been thinking during that time.</description>
     </item>
-    
     <item>
       <title>The steel industry, file_fdw and the synchronisation of data</title>
       <link>https://floriank.github.io/post/the-steel-industry-file_fdw-and-postgres/</link>
       <pubDate>Thu, 12 Jul 2018 09:30:30 +0100</pubDate>
-      
       <guid>https://floriank.github.io/post/the-steel-industry-file_fdw-and-postgres/</guid>
-      <description>Contents  Steel me. On the process of selling metals world wide Synchronisation vs. Import PostgreSQL, how I love thee  Foreign data wrappers file_fdw  Using file_fdw with Ecto Transform the data The key to doing things fast Joining external and internal tables What to do next? Numbers, please! So, we use this all the time now? Learnings and a repository  Steel me. My god.
-It has been 2 years since I wrote something.</description>
+      <description>Contents Steel me. On the process of selling metals world wide Synchronisation vs. Import PostgreSQL, how I love thee Foreign data wrappers file_fdw Using file_fdw with Ecto Transform the data The key to doing things fast Joining external and internal tables What to do next? Numbers, please! So, we use this all the time now? Learnings and a repository Steel me. My god.&#xA;It has been 2 years since I wrote something.</description>
     </item>
-    
     <item>
       <title>Using Phoenix with docker, Addendum: Exrm</title>
       <link>https://floriank.github.io/post/using-phoenix-with-docker-addendum-exrm/</link>
       <pubDate>Mon, 07 Mar 2016 12:28:34 +0100</pubDate>
-      
       <guid>https://floriank.github.io/post/using-phoenix-with-docker-addendum-exrm/</guid>
-      <description>This is an addendum to a three part series: Part 1 - Part 2 - Part 3
-Contents  Bad ideas Exrm Using Exrm with Kitteh Building the docker image(s) - once more.  The agony with build environments Results!  Assets Wait! Migrations! The problem with Mix.env So, we&amp;rsquo;re going to ignore ImageMagick? Conclusion  
-Bad ideas I have had some bad ideas in the past - building a container out of a Phoenix application like building it out of a Rails application wasn&amp;rsquo;t probably the best idea ever.</description>
+      <description>This is an addendum to a three part series: Part 1 - Part 2 - Part 3&#xA;Contents Bad ideas Exrm Using Exrm with Kitteh Building the docker image(s) - once more. The agony with build environments Results! Assets Wait! Migrations! The problem with Mix.env So, we&amp;rsquo;re going to ignore ImageMagick? Conclusion Bad ideas I have had some bad ideas in the past - building a container out of a Phoenix application like building it out of a Rails application wasn&amp;rsquo;t probably the best idea ever.</description>
     </item>
-    
     <item>
       <title>Using Phoenix with docker, Part 3: Containerization</title>
       <link>https://floriank.github.io/post/using-phoenix-with-docker-part-3-containerization/</link>
       <pubDate>Mon, 15 Feb 2016 15:47:39 +0100</pubDate>
-      
       <guid>https://floriank.github.io/post/using-phoenix-with-docker-part-3-containerization/</guid>
-      <description>This is the final part of a three part series: Part 1 - Part 2 - Part 3
-Note: I am using the latest docker-compose and the latest docker-engine later on in this post.
-Contents  Composition Kitteh Dockerfile Database connections Tearing it all down  Container structure Creating the volume container Docker 1.10 Configuring nginx Running the containers Assets and images  Looking back  Cleaning up  One more thing Conclusion  So far, so good.</description>
+      <description>This is the final part of a three part series: Part 1 - Part 2 - Part 3&#xA;Note: I am using the latest docker-compose and the latest docker-engine later on in this post.&#xA;Contents Composition Kitteh Dockerfile Database connections Tearing it all down Container structure Creating the volume container Docker 1.10 Configuring nginx Running the containers Assets and images Looking back Cleaning up One more thing Conclusion So far, so good.</description>
     </item>
-    
     <item>
       <title>Using Phoenix with docker, Part 2: Implementation</title>
       <link>https://floriank.github.io/post/using-phoenix-with-docker-part-2-implementation/</link>
       <pubDate>Mon, 15 Feb 2016 15:32:22 +0100</pubDate>
-      
       <guid>https://floriank.github.io/post/using-phoenix-with-docker-part-2-implementation/</guid>
-      <description>This is part two of a three part series: Part 1 - Part 2 - Part 3
-Contents  Installation  Elixir Phoenix  Let&amp;rsquo;s go Scaffolding Simpler times Providing a &amp;ldquo;frontend&amp;rdquo; New routes Reading the documentation Handle the file  Shortcuts  Resizing images  GenServer  Resizing Problems of the demo app Conclusion  
-Installation Before we start, please make sure you install Elixir and Phoenix. If you do not care or have already installed both, you can skip the next section.</description>
+      <description>This is part two of a three part series: Part 1 - Part 2 - Part 3&#xA;Contents Installation Elixir Phoenix Let&amp;rsquo;s go Scaffolding Simpler times Providing a &amp;ldquo;frontend&amp;rdquo; New routes Reading the documentation Handle the file Shortcuts Resizing images GenServer Resizing Problems of the demo app Conclusion Installation Before we start, please make sure you install Elixir and Phoenix. If you do not care or have already installed both, you can skip the next section.</description>
     </item>
-    
     <item>
       <title>Using Phoenix with docker, Part 1: Introduction</title>
       <link>https://floriank.github.io/post/using-phoenix-with-docker-part-1-introduction/</link>
       <pubDate>Mon, 15 Feb 2016 12:21:24 +0100</pubDate>
-      
       <guid>https://floriank.github.io/post/using-phoenix-with-docker-part-1-introduction/</guid>
-      <description>This is part one of a three part series: Part 1 - Part 2 - Part 3
-This part is an introduction to the project - consider skipping to part 2 if you do want some code
-Contents  Using Phoenix &amp;amp; Elixir Using docker Project Kitteh Continuing  A colleague of mine will not shut up about this.
-Working at a company using Ruby for day to day work, Elixir seems pretty appealing.</description>
+      <description>This is part one of a three part series: Part 1 - Part 2 - Part 3&#xA;This part is an introduction to the project - consider skipping to part 2 if you do want some code&#xA;Contents Using Phoenix &amp;amp; Elixir Using docker Project Kitteh Continuing A colleague of mine will not shut up about this.&#xA;Working at a company using Ruby for day to day work, Elixir seems pretty appealing.</description>
     </item>
-    
     <item>
       <title>Working around timing issues in docker compose</title>
       <link>https://floriank.github.io/post/working-around-timing-issues-in-docker-compose/</link>
       <pubDate>Thu, 04 Feb 2016 10:33:17 +0100</pubDate>
-      
       <guid>https://floriank.github.io/post/working-around-timing-issues-in-docker-compose/</guid>
-      <description>Containers I really like the concept of containers. Having been a somewhat avid vagrant user in the past, the speed gain that containers can provide over a virtual machine is a good sell to me. Also, having a very snapshottable environment I can bring up and down with dependencies packed neatly into containers is a plus. If you are reading this article you probably heard the sermon before.
-If you did not hear the good word yet - read up on it.</description>
+      <description>Containers I really like the concept of containers. Having been a somewhat avid vagrant user in the past, the speed gain that containers can provide over a virtual machine is a good sell to me. Also, having a very snapshottable environment I can bring up and down with dependencies packed neatly into containers is a plus. If you are reading this article you probably heard the sermon before.&#xA;If you did not hear the good word yet - read up on it.</description>
     </item>
-    
     <item>
       <title>Introduction: First post</title>
       <link>https://floriank.github.io/post/intro/</link>
       <pubDate>Tue, 02 Feb 2016 00:00:00 +0000</pubDate>
-      
       <guid>https://floriank.github.io/post/intro/</guid>
-      <description>First post hype!
-Erm. Not really. This is a first post to be made, but it contains nothing of interest really.
-I always wanted a blog to share my world view and my opinion with a world that probably could not care less about both of them - considering the mass of blogs and opinions, tweets, Facebook pages, likes, upvotes, kitty videos, doge videos and similar currently in existence.
-Nevertheless, I hope you can find something useful to you here in the future.</description>
+      <description>First post hype!&#xA;Erm. Not really. This is a first post to be made, but it contains nothing of interest really.&#xA;I always wanted a blog to share my world view and my opinion with a world that probably could not care less about both of them - considering the mass of blogs and opinions, tweets, Facebook pages, likes, upvotes, kitty videos, doge videos and similar currently in existence.&#xA;Nevertheless, I hope you can find something useful to you here in the future.</description>
     </item>
-    
   </channel>
 </rss>
